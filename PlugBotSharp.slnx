@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="DemoPlugin/DemoPlugin.csproj" />
+  <Project Path="PlugBotSharp.Core/PlugBotSharp.Core.csproj" />
+  <Project Path="PlugBotSharp.QQProxy/PlugBotSharp.QQProxy.csproj" />
+  <Project Path="PlugBotSharp.Run/PlugBotSharp.Run.csproj" />
+</Solution>
