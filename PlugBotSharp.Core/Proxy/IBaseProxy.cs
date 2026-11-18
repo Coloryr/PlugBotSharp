@@ -14,7 +14,8 @@ public interface IBaseProxy
     public bool Init(string path);
     public bool Load();
     public bool Unload();
-    public BaseProxyInstasnce CreateInstance();
+    public IProxyInstasnce CreateInstance();
+    public void ConfigInstance(IProxyInstasnce instasnce);
     public bool Enable();
     public bool Disable();
 }

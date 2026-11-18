@@ -90,11 +90,11 @@ public static class ConfigSave
         {
             try
             {
-                PathHelper.WriteText(item.File, item.Run());
+                File.WriteAllText(item.File, item.Run());
             }
             catch (Exception e)
             {
-                ColorMCCore.OnError(new ConfigSaveErrorEventArgs(e));
+                BotManager.Logger.Error(BotLang.GetLang(BotLangKey.ErrorConfigSave), e);
             }
         }
     }
@@ -103,7 +103,7 @@ public static class ConfigSave
     /// 添加保存项目
     /// </summary>
     /// <param name="obj">保存的项目</param>
-    public static void AddItem(ConfigSaveObj obj)
+    internal static void AddItem(ConfigSaveObj obj)
     {
         s_saveQue.Add(obj);
     }

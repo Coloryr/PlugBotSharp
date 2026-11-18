@@ -5,23 +5,13 @@ using System.Text;
 namespace PlugBotSharp.Core.Plugin;
 
 [AttributeUsage(AttributeTargets.Class)]
-public class PluginCommandAttribute : Attribute
+public class PluginCommandAttribute(string? basecommand = null) : Attribute
 {
-    public string? BaseCommand { get; init; }
-
-    public PluginCommandAttribute(string? basecommand = null)
-    { 
-        BaseCommand = basecommand;
-    }
+    public string? BaseCommand { get; init; } = basecommand;
 }
 
 [AttributeUsage(AttributeTargets.Class)]
-public class CommandAttribute : Attribute
+public class CommandAttribute(string command) : Attribute
 {
-    public string Command { get; init; }
-
-    public CommandAttribute(string command) 
-    {
-        Command = command;
-    }   
+    public string Command { get; init; } = command;
 }
