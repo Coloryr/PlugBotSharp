@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace PlugBotSharp.Core.Http;
 
@@ -55,6 +55,9 @@ internal static class EmbeddedAssets
         return s_types.TryGetValue(Path.GetExtension(path), out var type) ? type : "application/octet-stream";
     }
 
+    /// <summary>
+    /// 扫描程序集清单资源，建立「路径 -> 资源名」映射
+    /// </summary>
     private static Dictionary<string, string> Build()
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

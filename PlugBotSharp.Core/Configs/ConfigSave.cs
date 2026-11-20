@@ -6,9 +6,9 @@ using System.Text;
 namespace PlugBotSharp.Core.Configs;
 
 /// <summary>
-/// 配置文件保存
+/// 配置文件保存，只由宿主内部使用
 /// </summary>
-public static class ConfigSave
+internal static class ConfigSave
 {
     /// <summary>
     /// 保存队列
@@ -29,9 +29,15 @@ public static class ConfigSave
     /// </summary>
     internal static void Init()
     {
+        if (t_thread is { IsAlive: true })
+        {
+            return;
+        }
+
         t_thread = new Thread(Run)
         {
-            Name = "Config Save"
+            Name = "Config Save",
+            IsBackground = true
         };
         s_run = true;
         t_thread.Start();
@@ -94,7 +100,7 @@ public static class ConfigSave
             }
             catch (Exception e)
             {
-                BotManager.Logger.Error(BotLang.GetLang(BotLangKey.ErrorConfigSave), e);
+                BotManager.Logger.Error(e, BotLang.GetLang(BotLangKey.ErrorConfigSave));
             }
         }
     }

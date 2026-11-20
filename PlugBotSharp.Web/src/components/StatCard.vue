@@ -1,7 +1,8 @@
 <script setup>
 defineProps({
   label: { type: String, required: true },
-  value: { type: [String, Number], default: '-' }
+  value: { type: [String, Number], default: '-' },
+  hint: { type: String, default: '' }
 })
 </script>
 
@@ -9,5 +10,6 @@ defineProps({
   <div class="card">
     <div class="label">{{ label }}</div>
     <div class="value">{{ value }}</div>
+    <div v-if="hint" class="hint">{{ hint }}</div>
   </div>
 </template>

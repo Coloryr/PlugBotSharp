@@ -8,6 +8,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PlugBotSharp.Core\PlugBotSharp.Core.csproj" />
+    <ProjectReference Include="..\build\MetaGen\MetaGen.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="4.157.0" />
+  </ItemGroup>
+
+  <Import Project="..\build\ComponentPackage.targets" />
 
 </Project>

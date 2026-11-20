@@ -16,6 +16,10 @@
     <PackageReference Include="NLog" Version="6.2.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlugBotSharp.Tests" />
+  </ItemGroup>
+
   <!-- 编译前构建前端（-p:BuildAdminPanel=false 可跳过） -->
   <Target Name="BuildAdminPanel" BeforeTargets="PrepareForBuild" Condition="'$(BuildAdminPanel)' != 'false' And '$(DesignTimeBuild)' != 'true' And Exists('$(AdminPanelDir)package.json')">
     <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(AdminPanelDir)" Condition="!Exists('$(AdminPanelDir)node_modules')" />

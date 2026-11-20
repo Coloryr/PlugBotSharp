@@ -1,0 +1,104 @@
+<Project>
+
+  <!--
+    组件打包（插件 / 代理）：
+    1. 构建完成后由 build/MetaGen 读取 Meta.cs 生成清单（Meta.json）
+    2. 把清单和其中 Dlls 列出的 dll 打成一个 zip
+    - 组件工程 Import 本文件即可
+    - 没有 Meta.cs 时退回读取工程目录下同名的 json
+  -->
+  <PropertyGroup>
+    <ComponentMeta Condition="'$(ComponentMeta)' == ''">$(MSBuildProjectDirectory)\Meta.cs</ComponentMeta>
+    <ComponentManifestName Condition="'$(ComponentManifestName)' == ''">Meta.json</ComponentManifestName>
+  </PropertyGroup>
+
+  <!-- 路径依赖 IntermediateOutputPath / AssemblyName / Configuration，统一在目标里算 -->
+  <Target Name="InitComponentPackaging">
+    <PropertyGroup>
+      <GeneratedManifest>$(IntermediateOutputPath)$(ComponentManifestName)</GeneratedManifest>
+      <ComponentManifest Condition="'$(ComponentManifest)' == '' And Exists('$(ComponentMeta)')">$(GeneratedManifest)</ComponentManifest>
+      <ComponentManifest Condition="'$(ComponentManifest)' == ''">$(MSBuildProjectDirectory)\$(ComponentManifestName)</ComponentManifest>
+      <!-- NuGet 包布局：<pkg>/tools/net10.0/；仓库内布局：build/MetaGen/bin/... -->
+      <MetaGenTool Condition="'$(MetaGenTool)' == '' And Exists('$(MSBuildThisFileDirectory)..\tools\net10.0\PlugBotSharp.MetaGen.dll')">$(MSBuildThisFileDirectory)..\tools\net10.0\PlugBotSharp.MetaGen.dll</MetaGenTool>
+      <MetaGenTool Condition="'$(MetaGenTool)' == ''">$(MSBuildThisFileDirectory)MetaGen\bin\$(Configuration)\net10.0\PlugBotSharp.MetaGen.dll</MetaGenTool>
+      <ComponentPackageName Condition="'$(ComponentPackageName)' == ''">$(AssemblyName).zip</ComponentPackageName>
+      <ComponentStageDir>$(IntermediateOutputPath)component-package\</ComponentStageDir>
+      <ComponentPackagePath>$(TargetDir)$(ComponentPackageName)</ComponentPackagePath>
+    </PropertyGroup>
+  </Target>
+
+  <UsingTask TaskName="ReadComponentDlls" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ManifestPath ParameterType="System.String" Required="true" />
+      <Dlls ParameterType="System.String[]" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var json = File.ReadAllText(ManifestPath);
+        var block = Regex.Match(json, "\"Dlls\"\\s*:\\s*\\[(.*?)\\]", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        if (!block.Success)
+        {
+            Log.LogError("清单中没有找到 Dlls 数组: " + ManifestPath);
+            Dlls = new string[0];
+            return false;
+        }
+
+        Dlls = Regex.Matches(block.Groups[1].Value, "\"([^\"]+)\"")
+            .Cast<Match>()
+            .Select(m => m.Groups[1].Value)
+            .ToArray();
+
+        return true;
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <!-- 由 Meta.cs 生成清单 -->
+  <Target Name="GenerateComponentManifest" AfterTargets="Build" DependsOnTargets="InitComponentPackaging" Condition="Exists('$(ComponentMeta)')">
+    <Error Condition="!Exists('$(MetaGenTool)')" Text="找不到元数据生成器：$(MetaGenTool)，请检查 build/MetaGen 是否已编译" />
+
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec Command="dotnet &quot;$(MetaGenTool)&quot; --assembly &quot;$(TargetPath)&quot; --output &quot;$(ComponentManifest)&quot;" />
+  </Target>
+
+  <!-- 读取清单里的 Dlls -->
+  <Target Name="ReadComponentManifest" DependsOnTargets="InitComponentPackaging;GenerateComponentManifest">
+    <ReadComponentDlls ManifestPath="$(ComponentManifest)" Condition="Exists('$(ComponentManifest)')">
+      <Output TaskParameter="Dlls" ItemName="ComponentDll" />
+    </ReadComponentDlls>
+  </Target>
+
+  <!-- 构建结束后打包 -->
+  <Target Name="PackComponent" AfterTargets="Build" DependsOnTargets="ReadComponentManifest">
+    <Error Condition="!Exists('$(ComponentManifest)')" Text="找不到组件清单：$(ComponentManifest)，也没有可用的 Meta.cs" />
+
+    <ItemGroup>
+      <_ComponentDllFile Include="@(ComponentDll->'$(TargetDir)%(Identity)')" />
+      <_ComponentDllMissing Include="@(_ComponentDllFile)" Condition="!Exists('%(FullPath)')" />
+    </ItemGroup>
+
+    <Error Condition="'@(_ComponentDllMissing)' != ''" Text="清单里列出的文件不存在：@(_ComponentDllMissing)" />
+
+    <RemoveDir Directories="$(ComponentStageDir)" />
+
+    <Copy SourceFiles="$(ComponentManifest)" DestinationFiles="$(ComponentStageDir)$(ComponentManifestName)" />
+    <Copy SourceFiles="@(_ComponentDllFile)" DestinationFolder="$(ComponentStageDir)" Condition="'@(_ComponentDllFile)' != ''" />
+
+    <Delete Files="$(ComponentPackagePath)" />
+    <ZipDirectory SourceDirectory="$(ComponentStageDir)" DestinationFile="$(ComponentPackagePath)" />
+
+    <Message Importance="high" Text="Component package: $(ComponentPackagePath)" />
+  </Target>
+
+  <!-- clean 时删掉生成的文件、zip 和临时目录 -->
+  <Target Name="CleanComponentPackage" AfterTargets="Clean" DependsOnTargets="InitComponentPackaging">
+    <Delete Files="$(ComponentManifest);$(ComponentPackagePath)" />
+    <RemoveDir Directories="$(ComponentStageDir)" />
+  </Target>
+
+</Project>

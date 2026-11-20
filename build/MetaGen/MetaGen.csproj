@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>PlugBotSharp.MetaGen</AssemblyName>
+    <RootNamespace>PlugBotSharp.MetaGen</RootNamespace>
+  </PropertyGroup>
+
+  <!-- 作为构建工具包发布：不产出 lib/，消费者不会引用到程序集 -->
+  <PropertyGroup>
+    <PackageId>PlugBotSharp.MetaGen</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>PlugBotSharp</Authors>
+    <Description>PlugBotSharp 组件构建工具：读取 Meta.cs 生成 Meta.json，并把清单和 Dlls 打包成 zip。</Description>
+    <PackageTags>plugbotsharp;plugin;build</PackageTags>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMetaGenFiles</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 装包后自动导入，用户不用写 Import -->
+    <None Include="..\ComponentPackage.targets"
+          Pack="true"
+          PackagePath="build\$(PackageId).targets" />
+    <None Include="..\ComponentPackage.targets"
+          Pack="true"
+          PackagePath="buildTransitive\$(PackageId).targets" />
+  </ItemGroup>
+
+  <!-- 把生成器自身放进 tools/ -->
+  <Target Name="PackMetaGenFiles">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetDir)$(AssemblyName).dll" PackagePath="tools\$(TargetFramework)\" />
+      <TfmSpecificPackageFile Include="$(TargetDir)$(AssemblyName).runtimeconfig.json" PackagePath="tools\$(TargetFramework)\" />
+      <TfmSpecificPackageFile Include="$(TargetDir)$(AssemblyName).deps.json" PackagePath="tools\$(TargetFramework)\" />
+    </ItemGroup>
+  </Target>
+
+</Project>

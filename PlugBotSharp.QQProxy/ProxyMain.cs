@@ -7,12 +7,7 @@ public class ProxyMain : IBaseProxy
 {
     private Logger _logger;
 
-    public string Id => "qq";
-
-    public string Name => "QQ机器人";
-
-    public string Description => "QQ官方机器人平台";
-
+    /// <inheritdoc/>
     public bool Init(string path)
     {
         _logger = LogManager.GetLogger($"QQBot");
@@ -21,11 +16,13 @@ public class ProxyMain : IBaseProxy
         return true;
     }
 
+    /// <inheritdoc/>
     public IProxyInstasnce CreateInstance()
     {
         return new ProxyInstance();
     }
 
+    /// <inheritdoc/>
     public void ConfigInstance(IProxyInstasnce instasnce)
     {
         if (instasnce is ProxyInstance proxy)
@@ -34,11 +31,13 @@ public class ProxyMain : IBaseProxy
         }
     }
 
+    /// <inheritdoc/>
     public bool Disable()
     {
         return true;
     }
 
+    /// <inheritdoc/>
     public bool Enable()
     {
         return true;
@@ -46,11 +45,13 @@ public class ProxyMain : IBaseProxy
 
 
 
+    /// <inheritdoc/>
     public bool Load()
     {
         return true;
     }
 
+    /// <inheritdoc/>
     public bool Unload()
     {
         return true;
