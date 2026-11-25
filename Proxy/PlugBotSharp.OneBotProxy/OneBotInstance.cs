@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Proxy;
 using PlugBotSharp.OneBotLib;
 
 namespace PlugBotSharp.OneBotProxy;

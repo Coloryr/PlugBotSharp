@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using PlugBotSharp.Core.Configs;
 
-namespace PlugBotSharp.Core.Proxy;
+namespace PlugBotSharp.Core;
 
 public interface IBaseProxy : IComponent
 {

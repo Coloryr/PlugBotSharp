@@ -33,7 +33,7 @@ public sealed class RaiseHandle
     /// <param name="data">事件数据，JSON 节点，没数据就留空</param>
     public void Raise(JsonNode? data = null)
     {
-        EventManager.RaisePlugin(Id, Name, data);
+        ApiHost.Host.RaisePlugin(Id, Name, data, null);
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ public sealed class RaiseHandle
     /// <param name="message">消息</param>
     public void Raise(BaseMessage message)
     {
-        EventManager.RaisePlugin(Id, Name, null, message);
+        ApiHost.Host.RaisePlugin(Id, Name, null, message);
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public sealed class RaiseHandle
     /// <param name="value">字符串</param>
     public void Raise(string value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed class RaiseHandle
     /// <param name="value">字符</param>
     public void Raise(char value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public sealed class RaiseHandle
     /// <param name="value">布尔值</param>
     public void Raise(bool value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ public sealed class RaiseHandle
     /// <param name="value">字节</param>
     public void Raise(byte value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -87,7 +87,7 @@ public sealed class RaiseHandle
     /// <param name="value">有符号字节</param>
     public void Raise(sbyte value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -96,7 +96,7 @@ public sealed class RaiseHandle
     /// <param name="value">短整数</param>
     public void Raise(short value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ public sealed class RaiseHandle
     /// <param name="value">无符号短整数</param>
     public void Raise(ushort value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ public sealed class RaiseHandle
     /// <param name="value">整数</param>
     public void Raise(int value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public sealed class RaiseHandle
     /// <param name="value">无符号整数</param>
     public void Raise(uint value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public sealed class RaiseHandle
     /// <param name="value">长整数</param>
     public void Raise(long value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public sealed class RaiseHandle
     /// <param name="value">无符号长整数</param>
     public void Raise(ulong value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -150,7 +150,7 @@ public sealed class RaiseHandle
     /// <param name="value">单精度小数</param>
     public void Raise(float value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public sealed class RaiseHandle
     /// <param name="value">双精度小数</param>
     public void Raise(double value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 
     /// <summary>
@@ -168,6 +168,6 @@ public sealed class RaiseHandle
     /// <param name="value">高精度小数</param>
     public void Raise(decimal value)
     {
-        EventManager.RaisePlugin(Id, Name, value);
+        ApiHost.Host.RaisePlugin(Id, Name, value, null);
     }
 }

@@ -1,4 +1,5 @@
 using PlugBotSharp.Core;
+using PlugBotSharp.Core.Http;
 
 namespace PlugBotSharp.Tests;
 

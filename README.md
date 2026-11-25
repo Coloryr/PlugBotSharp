@@ -14,7 +14,7 @@
 
 ```bash
 dotnet build PlugBotSharp.slnx
-dotnet run --project PlugBotSharp.Run
+dotnet run --project PlugBotSharp
 ```
 
 首次启动会创建运行目录，然后：
@@ -65,12 +65,14 @@ Instances/
   {实例uuid}/
     Instance.json              实例定义
     config.json                实例配置，由组件自己读写
+    states.json                实例状态，宿主自动落盘
 Configs/
   Accounts.json                面板账户（PBKDF2 哈希）
   Sessions.json                登录会话（只存 token 的 SHA-256）
   ComponentState.json          组件启用状态
   InstanceState.json           实例启用状态
   {组件id}/                    组件配置
+    states.json                组件状态，宿主自动落盘
 Certs/
   Certs.json                   证书清单（名字 / 文件 / 密码）
   *.pfx                        IIS 导出的证书，面板和组件共用
@@ -138,6 +140,23 @@ PlugBotSharp.QQProxy.dll
 
 - 卸载组件时手动 `Free` native 库，前提是组件自己的线程已经停止
 - 登录防爆破状态是内存态，进程重启后计数清零
+
+## 许可
+
+| 项目 | 协议 | 许可证文件 |
+| --- | --- | --- |
+| `PlugBotSharp`（启动器） | AGPL-3.0-or-later | [LICENSE](LICENSE) |
+| `PlugBotSharp.Core` | AGPL-3.0-or-later | [LICENSE](LICENSE) |
+| `PlugBotSharp.Web` | AGPL-3.0-or-later | [LICENSE](LICENSE) |
+| `PlugBotSharp.Tests` | AGPL-3.0-or-later | [LICENSE](LICENSE) |
+| `PlugBotSharp.Api` | MIT | [LICENSE-MIT](LICENSE-MIT) |
+| `PlugBotSharp.QQLib` / `PlugBotSharp.OneBotLib` | Apache-2.0 | [LICENSE-APACHE-2.0](LICENSE-APACHE-2.0) |
+| `PlugBotSharp.QQProxy` / `PlugBotSharp.OneBotProxy` / `PlugBotSharp.GsCoreProxy` | Apache-2.0 | [LICENSE-APACHE-2.0](LICENSE-APACHE-2.0) |
+| `DemoPlugin` / `DemoLib` / `ProxyDemo` | MIT | [LICENSE-MIT](LICENSE-MIT) |
+
+- 基于 `PlugBotSharp.Api`（MIT）开发自己的插件，插件本身可以自由选择协议
+- 引用 `QQLib` / `OneBotLib` 的组件按 Apache-2.0 发布
+- 修改宿主（`Core` / 启动器 / 面板）并按 AGPL 分发时，需要公开修改后的源码
 
 ## 文档
 

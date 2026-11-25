@@ -45,7 +45,7 @@ public static class Meta
 ## 4. 入口 LibMain
 
 ```csharp
-using PlugBotSharp.Core.Lib;
+using PlugBotSharp.Core;
 
 namespace EchoLib;
 

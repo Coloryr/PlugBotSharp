@@ -2,12 +2,12 @@ using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
 
-namespace PlugBotSharp.Core.Crypto;
+namespace PlugBotSharp.QQProxy.Crypto;
 
 /// <summary>
-/// Ed25519 签名算法（RFC 8032），只用于小数据签名，不追求常量时间
+/// Ed25519 签名算法（RFC 8032），QQ 平台回调验签用，只处理小数据，不追求常量时间
 /// </summary>
-public static class Ed25519
+internal static class Ed25519
 {
     /// <summary>
     /// 私钥种子长度

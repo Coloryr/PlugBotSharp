@@ -1,8 +1,8 @@
 using DemoPlugin;
 using PlugBotSharp.Core;
+using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Http;
 using PlugBotSharp.QQLib;
 
 namespace PlugBotSharp.Tests;

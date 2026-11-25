@@ -64,7 +64,29 @@ _commandState?.Clear();
 - 高频场景（比如每秒几十次的计数）可以只留最新值，`Set` 是覆盖写
 - 句柄可以一直留着，注册阶段结束后照样能 `Set` / `Remove`；组件卸载时宿主会清掉它上报的全部状态
 
-## 6. 面板接口里的样子
+## 6. 自动落盘
+
+状态由**宿主自动保存**，组件不用自己写文件：
+
+- 组件存在 `Configs/{组件id}/states.json`，实例存在 `Instances/{uuid}/states.json`
+- 默认每 2 秒把改过的状态写一次盘；组件卸载、实例删除、进程正常退出时也会立刻刷一次
+- 间隔可以调：运行目录 `Config.json` 里的 `StateSaveInterval`（毫秒，最小 `1000`，默认 `2000`），改完重启生效
+- 重新加载时，`RegisterState` / `RegisterKvState` 会把上次落盘的值读回来，句柄上的 `Get()` 能拿到：
+
+```csharp
+_receiveState = register.RegisterState("recv", "收到条数", "累计收到的条数");
+
+// 重启后接着上次的数
+_received = _receiveState.Get() is { } value ? Convert.ToInt64(value) : 0;
+_receiveState.Set(_received);
+```
+
+- 键值状态同理：`Get()` 返回 `IReadOnlyDictionary<string, object?>`
+- 落盘的值按原类型还原：整数是 `long`、小数是 `double`、开关是 `bool`、文本是 `string`
+- 运行时标志（比如“当前是否已连接”）也会被存下来，重新注册后自己 `Set` 一次当前真实值覆盖掉就行
+- 想清掉累计值，删掉对应的 `states.json` 再重载组件 / 实例
+
+## 7. 面板接口里的样子
 
 `GET /api/admin/components` 和 `GET /api/admin/instances` 的 `states` 字段：
 
@@ -87,12 +109,12 @@ _commandState?.Clear();
 
 概览页用的 `GET /api/admin/overview` 里，`componentItems` / `instanceItems` 每项也带同样的 `states`。
 
-## 7. 例子
+## 8. 例子
 
 - [DemoPlugin](../../Plugin/DemoPlugin)：`pings` / `events` / `replies` / `blocked` 单值，`commands` 键值
 - [QQ 代理](../../Proxy/PlugBotSharp.QQProxy)：`quota` 键值，记每天各群已发的主动消息条数
 
-## 8. 注意
+## 9. 注意
 
 - 状态名在同一个组件里唯一，同名会覆盖
 - 值只能是基础类型 / 键值字典，不要挂自己的对象（面板要 JSON 序列化）

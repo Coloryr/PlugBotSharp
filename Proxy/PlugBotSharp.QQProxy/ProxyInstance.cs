@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Proxy;
 using PlugBotSharp.QQLib;
 
 namespace PlugBotSharp.QQProxy;
@@ -695,6 +694,14 @@ public class ProxyInstance : IProxyInstasnce
     /// <inheritdoc/>
     public void Tick()
     {
+        // 每天第一秒把主动配额清零，别等有人发消息才发现跨天了
+        if (_quota?.RolloverIfNeeded() == true)
+        {
+            Logger.Info("主动消息配额已跨天清零");
+
+            PublishQuota();
+        }
+
         if (_update)
         {
             return;

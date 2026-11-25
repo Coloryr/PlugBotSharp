@@ -1,5 +1,3 @@
-using PlugBotSharp.Core.Http;
-
 namespace PlugBotSharp.Core;
 
 /// <summary>
@@ -25,90 +23,90 @@ public sealed class StateValueHandle : StateHandle
     /// </summary>
     public object? Get()
     {
-        return StateRegistry.GetValue(Owner, Name);
+        return ApiHost.Host.GetStateValue(Owner, Name);
     }
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">文本</param>
-    public void Set(string value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(string value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">字符</param>
-    public void Set(char value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(char value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">开关</param>
-    public void Set(bool value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(bool value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">字节</param>
-    public void Set(byte value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(byte value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">有符号字节</param>
-    public void Set(sbyte value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(sbyte value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">短整数</param>
-    public void Set(short value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(short value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">无符号短整数</param>
-    public void Set(ushort value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(ushort value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">整数</param>
-    public void Set(int value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(int value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">无符号整数</param>
-    public void Set(uint value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(uint value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">长整数</param>
-    public void Set(long value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(long value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">无符号长整数</param>
-    public void Set(ulong value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(ulong value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">单精度小数</param>
-    public void Set(float value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(float value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">双精度小数</param>
-    public void Set(double value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(double value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 
     /// <summary>
     /// 更新状态值
     /// </summary>
     /// <param name="value">高精度小数</param>
-    public void Set(decimal value) => StateRegistry.SetValue(Owner, Name, value);
+    public void Set(decimal value) => ApiHost.Host.SetStateValue(Owner, Name, value);
 }

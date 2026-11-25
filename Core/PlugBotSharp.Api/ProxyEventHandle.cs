@@ -21,6 +21,6 @@ public sealed class ProxyEventHandle
     /// <param name="message">收到的消息</param>
     public List<BaseMessage> Dispatch(ProxyMessage message)
     {
-        return EventManager.HandleMessage(message);
+        return ApiHost.Host.Dispatch(message);
     }
 }

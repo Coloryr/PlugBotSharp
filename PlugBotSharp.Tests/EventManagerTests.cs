@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using PlugBotSharp.Core;
+using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Messages;
 
 namespace PlugBotSharp.Tests;

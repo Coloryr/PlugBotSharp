@@ -65,6 +65,42 @@ public class ActiveQuotaTests
         }
     }
 
+    [Fact]
+    public void Rollover_clears_counts_and_writes_the_new_date()
+    {
+        var folder = CreateFolder();
+
+        try
+        {
+            var data = new QuotaFileObj
+            {
+                Date = DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd"),
+                Groups = new Dictionary<string, int> { ["group"] = 12, ["other"] = 3 }
+            };
+
+            File.WriteAllText(Path.Combine(folder, "quota.json"), JsonUtils.ToString(data, JsonContext.Default.QuotaFileObj));
+
+            var quota = new ActiveQuota(folder);
+
+            Assert.True(quota.RolloverIfNeeded());
+            Assert.Equal(0, quota.Get("group"));
+            Assert.Equal(0, quota.Get("other"));
+
+            // 第二次调就没什么可做的了
+            Assert.False(quota.RolloverIfNeeded());
+
+            // 清零已经落盘，重新打开还是今天的空表
+            var reloaded = new ActiveQuota(folder);
+
+            Assert.Equal(0, reloaded.Get("group"));
+            Assert.False(reloaded.RolloverIfNeeded());
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
     /// <summary>
     /// 建临时实例目录
     /// </summary>

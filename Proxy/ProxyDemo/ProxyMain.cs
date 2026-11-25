@@ -1,7 +1,6 @@
 using NLog;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Proxy;
 
 namespace ProxyDemo;
 

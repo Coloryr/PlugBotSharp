@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using PlugBotSharp.Core;
+using PlugBotSharp.Core.Http;
 
 namespace PlugBotSharp.Tests;
 

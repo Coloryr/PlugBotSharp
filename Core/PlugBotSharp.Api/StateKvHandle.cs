@@ -1,5 +1,3 @@
-using PlugBotSharp.Core.Http;
-
 namespace PlugBotSharp.Core;
 
 /// <summary>
@@ -26,7 +24,7 @@ public sealed class StateKvHandle : StateHandle
     /// </summary>
     public IReadOnlyDictionary<string, object?> Get()
     {
-        return StateRegistry.GetValue(Owner, Name) as IReadOnlyDictionary<string, object?>
+        return ApiHost.Host.GetStateValue(Owner, Name) as IReadOnlyDictionary<string, object?>
             ?? new Dictionary<string, object?>();
     }
 
@@ -39,7 +37,7 @@ public sealed class StateKvHandle : StateHandle
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        StateRegistry.SetKey(Owner, Name, key, value);
+        ApiHost.Host.SetStateKey(Owner, Name, key, value);
     }
 
     /// <summary>
@@ -48,7 +46,7 @@ public sealed class StateKvHandle : StateHandle
     /// <param name="key">键</param>
     public void Remove(string key)
     {
-        StateRegistry.RemoveKey(Owner, Name, key);
+        ApiHost.Host.RemoveStateKey(Owner, Name, key);
     }
 
     /// <summary>
@@ -56,6 +54,6 @@ public sealed class StateKvHandle : StateHandle
     /// </summary>
     public void Clear()
     {
-        StateRegistry.ClearKeys(Owner, Name);
+        ApiHost.Host.ClearStateKeys(Owner, Name);
     }
 }

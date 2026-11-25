@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using PlugBotSharp.Core;
 using PlugBotSharp.Core.Http;
 using PlugBotSharp.OneBotProxy;
 

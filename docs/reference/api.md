@@ -210,6 +210,7 @@ ComponentApi.UnregisterHttpPath(instance);
 
 | 方法 | 说明 |
 | --- | --- |
+| `Lang` | 宿主当前语言（`zh_cn` / `en_us`），组件做多语言时读它 |
 | `GetComponents()` | 全部组件（含磁盘上还没加载的），返回 `ComponentInfo`：`Id` / `Name` / `Version` / `Type` / `Description` / `Folder` / `Loaded` / `Enabled` / `Blocked` / `State` |
 | `GetInstances()` | 全部实例（含磁盘上还没加载的），返回 `InstanceInfo`：`Uuid` / `Proxy` / `Name` / `Folder` / `Loaded` / `Enabled` |
 | `GetComponentState(string id)` | 组件状态：`enabled` / `disabled` / `loaded` / `unloaded` / `blocked` |

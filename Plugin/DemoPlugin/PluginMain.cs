@@ -2,7 +2,6 @@ using System.Text.Json;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Plugin;
 using PlugBotSharp.QQLib;
 
 namespace DemoPlugin;

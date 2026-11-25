@@ -1,6 +1,6 @@
 ﻿using PlugBotSharp.Core;
 
-namespace PlugBotSharp.Run;
+namespace PlugBotSharp;
 
 internal class Program
 {

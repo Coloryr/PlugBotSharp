@@ -23,9 +23,39 @@ internal static class StateRegistry
     private static readonly ConcurrentDictionary<object, OwnerStates> s_states = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>
-    /// 每隔两秒把改过的状态写一次盘
+    /// 状态自动落盘的间隔，最小 1000 毫秒
     /// </summary>
-    private static readonly Timer s_timer = new(_ => Flush(), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    public static int SaveInterval { get; private set; } = 2000;
+
+    private static readonly Lock s_timerLock = new();
+
+    private static Timer? s_timer = CreateTimer(SaveInterval);
+
+    /// <summary>
+    /// 改自动落盘的间隔，小于 1000 毫秒按 1000 处理
+    /// </summary>
+    /// <param name="milliseconds">间隔（毫秒）</param>
+    public static void SetSaveInterval(int milliseconds)
+    {
+        var interval = Math.Max(1000, milliseconds);
+
+        lock (s_timerLock)
+        {
+            SaveInterval = interval;
+
+            s_timer?.Dispose();
+            s_timer = CreateTimer(interval);
+        }
+    }
+
+    /// <summary>
+    /// 建一个定时落盘的计时器
+    /// </summary>
+    /// <param name="interval">间隔（毫秒）</param>
+    private static Timer CreateTimer(int interval)
+    {
+        return new Timer(_ => Flush(), null, interval, interval);
+    }
 
     /// <summary>
     /// 声明一个状态，注册阶段调用：把名字、显示名和描述记下来，同时把上次落盘的值读回来

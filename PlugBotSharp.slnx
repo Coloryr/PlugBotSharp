@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Core/PlugBotSharp.Api/PlugBotSharp.Api.csproj" />
   <Project Path="Core/PlugBotSharp.Core/PlugBotSharp.Core.csproj" />
   <Project Path="Lib/DemoLib/DemoLib.csproj" />
   <Project Path="Lib/PlugBotSharp.OneBotLib/PlugBotSharp.OneBotLib.csproj" />
@@ -8,7 +9,7 @@
   <Project Path="Proxy/PlugBotSharp.OneBotProxy/PlugBotSharp.OneBotProxy.csproj" />
   <Project Path="Proxy/PlugBotSharp.QQProxy/PlugBotSharp.QQProxy.csproj" />
   <Project Path="Proxy/ProxyDemo/ProxyDemo.csproj" />
-  <Project Path="PlugBotSharp.Run/PlugBotSharp.Run.csproj" />
+  <Project Path="PlugBotSharp/PlugBotSharp.csproj" />
   <Project Path="PlugBotSharp.Tests/PlugBotSharp.Tests.csproj" />
   <Project Path="build/MetaGen/MetaGen.csproj" />
 </Solution>

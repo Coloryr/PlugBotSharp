@@ -1,4 +1,4 @@
-using PlugBotSharp.Core.Crypto;
+using PlugBotSharp.QQProxy.Crypto;
 
 namespace PlugBotSharp.Tests;
 

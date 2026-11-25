@@ -117,7 +117,7 @@ public class GenshinReceiveTests
             Assert.Equal("gscoreproxy", received!.Id);
             Assert.Equal(uuid, received.Uuid);
             Assert.Equal("hi", Assert.IsType<TextMessage>(received.Message).Text);
-            Assert.Equal(1, StateRegistry.Get(instance)["recv"].Value);
+            Assert.Equal(1L, StateRegistry.Get(instance)["recv"].Value);
         }
         finally
         {

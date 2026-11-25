@@ -1,6 +1,6 @@
 using NLog;
 using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Proxy;
+using PlugBotSharp.Core;
 
 namespace PlugBotSharp.GsCoreProxy;
 

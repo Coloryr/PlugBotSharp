@@ -71,19 +71,31 @@ internal sealed class ActiveQuota
     }
 
     /// <summary>
-    /// 跨天就把计数清零
+    /// 跨天就把计数清零，清零后立刻写盘；返回这次是不是真的跨天了
     /// </summary>
-    private void EnsureToday()
+    public bool RolloverIfNeeded()
     {
         var today = DateTime.Now.ToString("yyyy-MM-dd");
 
         if (_data.Date == today)
         {
-            return;
+            return false;
         }
 
         _data.Date = today;
         _data.Groups.Clear();
+
+        Save();
+
+        return true;
+    }
+
+    /// <summary>
+    /// 跨天就把计数清零
+    /// </summary>
+    private void EnsureToday()
+    {
+        RolloverIfNeeded();
     }
 
     /// <summary>

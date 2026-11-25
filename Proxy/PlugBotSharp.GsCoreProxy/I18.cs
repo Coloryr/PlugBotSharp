@@ -30,7 +30,7 @@ public static class GenshinLang
     /// </summary>
     public static string Get(GenshinLangKey key, params object[] args)
     {
-        var text = BotManager.Lang == Lang.en_us ? GetEn(key) : GetZh(key);
+        var text = ComponentApi.Lang == Lang.en_us ? GetEn(key) : GetZh(key);
 
         return args.Length == 0 ? text : string.Format(text, args);
     }

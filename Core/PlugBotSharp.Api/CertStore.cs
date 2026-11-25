@@ -198,7 +198,7 @@ public static class CertStore
             }
             catch (Exception e)
             {
-                BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.CertExtractFail, zip));
+                ApiHost.Current?.LogError(e, "证书解压失败: " + zip);
             }
         }
     }
@@ -270,7 +270,7 @@ public static class CertStore
         }
         catch (Exception e)
         {
-            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.CertPasswordReadFail, path));
+            ApiHost.Current?.LogError(e, "证书密码读取失败: " + path);
         }
 
         return "";
@@ -279,7 +279,7 @@ public static class CertStore
     /// <summary>
     /// 读证书清单
     /// </summary>
-    private static List<Configs.CertItemObj> ReadManifest()
+    private static List<CertItemObj> ReadManifest()
     {
         var manifest = System.IO.Path.Combine(s_path, ManifestName);
 
@@ -290,14 +290,14 @@ public static class CertStore
 
         try
         {
-            var obj = Configs.JsonUtils.ToObj(System.IO.File.ReadAllText(manifest),
-                Configs.SourceGenerationContext.Default.CertFileObj);
+            var obj = System.Text.Json.JsonSerializer.Deserialize<CertFileObj>(
+                System.IO.File.ReadAllText(manifest), new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             return (obj?.Items ?? []).Where(x => !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.File)).ToList();
         }
         catch (Exception e)
         {
-            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.CertManifestInvalid, manifest));
+            ApiHost.Current?.LogError(e, "证书清单无效: " + manifest);
             return [];
         }
     }

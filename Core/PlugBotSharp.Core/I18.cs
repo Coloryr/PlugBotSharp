@@ -1,11 +1,5 @@
 namespace PlugBotSharp.Core;
 
-public enum Lang
-{
-    zh_cn,
-    en_us
-}
-
 internal enum BotLangKey
 {
     Init,

@@ -43,9 +43,9 @@ public sealed class SendHandle
             && string.Equals(context.Id, _ownProxyId, StringComparison.Ordinal)
             && (_ownUuid is null || context.Uuid != _ownUuid))
         {
-            throw new InvalidOperationException(BotLang.GetLang(BotLangKey.SendToSelf, _ownProxyId));
+            throw new InvalidOperationException($"代理 {_ownProxyId} 不能给自己发消息");
         }
 
-        return EventManager.HandleSendAsync(context, message, OwnerId);
+        return ApiHost.Host.SendAsync(context, message, OwnerId);
     }
 }

@@ -4,7 +4,7 @@ using System.Text;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
 
-namespace PlugBotSharp.Core.Proxy;
+namespace PlugBotSharp.Core;
 
 public interface IProxyInstasnce : IBaseComponent
 {

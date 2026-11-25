@@ -739,6 +739,11 @@ internal sealed class ComponentLoadContext(string folder) : AssemblyLoadContext(
     private static readonly string s_coreName = typeof(BotManager).Assembly.GetName().Name!;
 
     /// <summary>
+    /// Api 程序集名，和 Core 一样由宿主提供
+    /// </summary>
+    private static readonly string s_apiName = typeof(IRegister).Assembly.GetName().Name!;
+
+    /// <summary>
     /// 已加载的 native 库路径 -> 句柄
     /// </summary>
     private readonly Dictionary<string, IntPtr> s_natives = [];
@@ -776,8 +781,8 @@ internal sealed class ComponentLoadContext(string folder) : AssemblyLoadContext(
 
     protected override Assembly? Load(AssemblyName name)
     {
-        // Core 由宿主提供，避免类型重复
-        if (name.Name == s_coreName)
+        // Core / Api 由宿主提供，避免类型重复
+        if (name.Name == s_coreName || name.Name == s_apiName)
         {
             return null;
         }

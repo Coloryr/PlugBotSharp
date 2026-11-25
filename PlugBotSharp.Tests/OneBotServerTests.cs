@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using PlugBotSharp.Core;
 using PlugBotSharp.Core.Http;
 using PlugBotSharp.OneBotProxy;
 

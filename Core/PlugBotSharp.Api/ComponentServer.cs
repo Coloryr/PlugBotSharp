@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace PlugBotSharp.Core.Http;
+namespace PlugBotSharp.Core;
 
 /// <summary>
 /// 组件用的 http / websocket 服务器，由宿主统一创建和关闭
@@ -52,7 +52,7 @@ public sealed class ComponentServer
         if (!string.IsNullOrWhiteSpace(certificate)
             && !CertStore.TryResolve(certificate, password, out certificate, out password))
         {
-            BotManager.Logger?.Error(BotLang.GetLang(BotLangKey.CertNotFound, certificate));
+            ApiHost.Current?.LogError(null, "找不到证书: " + certificate);
 
             return false;
         }
@@ -82,7 +82,7 @@ public sealed class ComponentServer
         }
         catch (Exception e)
         {
-            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.HttpStartError));
+            ApiHost.Current?.LogError(e, "组件服务器启动失败");
 
             app.DisposeAsync().AsTask().GetAwaiter().GetResult();
 
@@ -91,7 +91,7 @@ public sealed class ComponentServer
 
         _app = app;
 
-        BotManager.Logger?.Info(BotLang.GetLang(BotLangKey.ServerListening, Url));
+        ApiHost.Current?.LogInfo("组件服务器监听中 " + Url);
 
         return true;
     }
@@ -115,7 +115,7 @@ public sealed class ComponentServer
         }
         catch (Exception e)
         {
-            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.HttpStopError));
+            ApiHost.Current?.LogError(e, "组件服务器停止失败");
         }
         finally
         {

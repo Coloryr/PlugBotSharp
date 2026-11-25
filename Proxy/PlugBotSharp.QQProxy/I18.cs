@@ -52,7 +52,7 @@ public static class ProxyLang
     /// </summary>
     public static string GetLang(ProxyLangKey key, params object[] args)
     {
-        var text = BotManager.Lang == Lang.en_us ? GetEn(key) : GetZh(key);
+        var text = ComponentApi.Lang == Lang.en_us ? GetEn(key) : GetZh(key);
 
         return args.Length == 0 ? text : string.Format(text, args);
     }

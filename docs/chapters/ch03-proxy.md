@@ -27,7 +27,7 @@ Proxy/EchoProxy/
   DataObjs.cs           报文模型 + JsonSerializerContext（可选）
 ```
 
-`csproj` 和插件一样：引用 `PlugBotSharp.Core`、引用 `MetaGen` 但不带 dll、Import 打包目标。
+`csproj` 和插件一样：引用 `PlugBotSharp.Api`、引用 `MetaGen` 但不带 dll、Import 打包目标。
 
 ## 3. 清单 Meta.cs
 

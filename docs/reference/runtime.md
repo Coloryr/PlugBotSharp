@@ -4,7 +4,8 @@
 
 | 目录 | 项目 | 说明 |
 | --- | --- | --- |
-| `Core/` | `PlugBotSharp.Core` | 宿主核心，引用 `Microsoft.AspNetCore.App`，内嵌管理面板 |
+| `Core/` | `PlugBotSharp.Api` | 组件开发用的 API：接口、消息模型、注册器和句柄，**组件只引用它** |
+| `Core/` | `PlugBotSharp.Core` | 宿主核心，实现 Api 定义的接口，跑组件、内嵌管理面板 |
 | `Lib/` | `DemoLib` | 示例运行库（id `demolib`，Type `Lib`），演示 Lib 组件的写法 |
 | `Lib/` | `PlugBotSharp.QQLib` | QQ 平台模型（消息体 / 键盘 / 卡片）和 `BaseMessage` ↔ QQ 消息转换 |
 | `Lib/` | `PlugBotSharp.OneBotLib` | OneBot 11 消息段模型和 `BaseMessage` 转换、平台专属消息段 |
@@ -13,11 +14,13 @@
 | `Proxy/` | `PlugBotSharp.QQProxy` | 官方 QQ 通信代理组件，依赖 `qqlib` |
 | `Proxy/` | `PlugBotSharp.OneBotProxy` | OneBot 11 / 12 通信代理组件，依赖 `onebotlib` |
 | `Proxy/` | `PlugBotSharp.GsCoreProxy` | gsuid_core 通信代理组件（id `gscoreproxy`） |
-| 根目录 | `PlugBotSharp.Run` | 启动入口，运行目录为程序所在目录 |
+| 根目录 | `PlugBotSharp` | 启动入口，运行目录为程序所在目录 |
 | 根目录 | `PlugBotSharp.Web` | Vue 3 + Vite 管理面板 |
 | 根目录 | `PlugBotSharp.Tests` | xUnit 测试 |
 | `build/` | `MetaGen` | 从 `Meta.cs` 生成 `Meta.json` 的工具（可打包成 NuGet） |
 | `build/` | `ComponentPackage.targets` | 组件打包：生成清单并把清单里声明的 dll 打成一个 zip |
+
+许可：`PlugBotSharp`（启动器）、`PlugBotSharp.Core`、`PlugBotSharp.Web`、`PlugBotSharp.Tests` 是 AGPL-3.0-or-later；`PlugBotSharp.Api` 是 MIT；`QQLib` / `OneBotLib` 和三个代理是 Apache-2.0；`DemoPlugin` / `DemoLib` / `ProxyDemo` 是 MIT。
 
 `PlugBotSharp.Core` 内部按职责分目录，命名空间还是 `PlugBotSharp.Core`，组件里的 `using` 不用改：
 
@@ -29,7 +32,7 @@
 | `Messages/` | 统一消息模型：`BaseMessage` 和各个消息类型 |
 | 其他 | `Auth/`、`Configs/`、`Http/`、`Lib/`、`Nuget/`、`Plugin/`、`Proxy/`，命名空间和目录同名 |
 
-根目录放宿主入口和小工具：`BotManager`（启动 / 加载）、`ConsoleManager`（控制台指令）、`HttpManager`（管理面板）、`ComponentApi`（组件能调的宿主接口）、`CertStore`（证书仓库）、`Ed25519`（签名校验）、`I18`（多语言）。
+根目录放宿主入口和小工具：`BotManager`（启动 / 加载）、`ConsoleManager`（控制台指令）、`HttpManager`（管理面板）、`ComponentApi`（组件能调的宿主接口）、`CertStore`（证书仓库）、`I18`（多语言）。
 
 ## 构建
 
@@ -38,7 +41,7 @@ dotnet build PlugBotSharp.slnx
 dotnet test PlugBotSharp.Tests
 ```
 
-构建完 `PlugBotSharp.Run/bin/Debug/net10.0` 就是一个**完整的运行目录**：宿主 dll 在根上，八个组件已经解压到 `Components/{组件id}`，直接双击 `PlugBotSharp.Run.exe` 就能跑（`Run` 工程的 `DeployComponents` 目标负责解压，组件只参与构建、不进引用）。
+构建完 `PlugBotSharp/bin/Debug/net10.0` 就是一个**完整的运行目录**：宿主 dll 在根上，八个组件已经解压到 `Components/{组件id}`，直接双击 `PlugBotSharp.exe` 就能跑（启动工程的 `DeployComponents` 目标负责解压，组件只参与构建、不进引用）。
 
 这个目录同时就是运行目录，`Nugets`、`Configs`（面板账户、组件配置）、`Instances`、`Config.json`、`Logs` 都是运行时数据。构建只覆盖解压 `Components/{组件id}`，不删这些目录，所以重新构建、重启都不会丢账户，也不会重新下载 NuGet 包。
 
@@ -47,7 +50,7 @@ dotnet test PlugBotSharp.Tests
 ## 运行目录
 
 ```
-Config.json                    面板端口和证书
+Config.json                    面板端口、证书、状态落盘间隔
 Components/{组件id}/            装好的组件，Meta.json + dll
 Instances/{实例uuid}/          实例定义和实例配置
 Configs/                       账户、会话、组件启用状态、组件配置

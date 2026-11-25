@@ -157,14 +157,14 @@ curl http://127.0.0.1:10000/api/echo
 
 ### 本地附加
 
-1. 启动 `PlugBotSharp.Run`（面板起来、组件已加载）
-2. IDE 里「附加到进程」，选 `PlugBotSharp.Run`（或 `dotnet` 托管的那个进程）
+1. 启动 `PlugBotSharp`（面板起来、组件已加载）
+2. IDE 里「附加到进程」，选 `PlugBotSharp`（或 `dotnet` 托管的那个进程）
 3. 打开组件源码，在 `HandleMessage` 里下断点
 4. 发一条消息触发它
 
 ### 远程附加
 
-- **Visual Studio**：把远程调试器（msvsmon，和 VS 同版本）拷到服务器跑起来，调试 → 附加到进程 → 连接类型选远程 → 填 `服务器:4026`，再选 `PlugBotSharp.Run`
+- **Visual Studio**：把远程调试器（msvsmon，和 VS 同版本）拷到服务器跑起来，调试 → 附加到进程 → 连接类型选远程 → 填 `服务器:4026`，再选 `PlugBotSharp`
 - **Rider**：用 SSH 远程调试，配好服务器的 dotnet 和进程，直接“Attach to Remote Process”
 - **VS Code**：`launch.json` 里用 `pipeTransport` 连远端 `vsdbg`
 

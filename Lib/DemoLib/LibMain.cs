@@ -1,4 +1,4 @@
-using PlugBotSharp.Core.Lib;
+using PlugBotSharp.Core;
 
 namespace DemoLib;
 

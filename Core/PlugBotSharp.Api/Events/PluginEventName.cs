@@ -18,7 +18,7 @@ public static class PluginEventName
 
         if (componentId.Contains('[') || componentId.Contains(']') || eventId.Contains('[') || eventId.Contains(']'))
         {
-            throw new ArgumentException(BotLang.GetLang(BotLangKey.EventNameInvalid, $"[{componentId}]{eventId}"));
+            throw new ArgumentException($"事件名格式不对，应该是 [组件id]事件id: [{componentId}]{eventId}");
         }
 
         return $"[{componentId}]{eventId}";

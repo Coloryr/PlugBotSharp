@@ -21,6 +21,11 @@ internal class ConfigObj
     /// 证书密码
     /// </summary>
     public string CertificatePassword { get; set; } = "";
+
+    /// <summary>
+    /// 状态自动落盘的间隔（毫秒），最小 1000
+    /// </summary>
+    public int StateSaveInterval { get; set; } = 2000;
 }
 
 /// <summary>
@@ -106,33 +111,6 @@ internal class DebugMessageObj
     public string Text { get; set; } = "";
 }
 
-/// <summary>
-/// 证书清单（Certs/Certs.json）
-/// </summary>
-internal class CertFileObj
-{
-    public List<CertItemObj> Items { get; set; } = [];
-}
-
-/// <summary>
-/// 单个证书
-/// </summary>
-internal class CertItemObj
-{
-    /// <summary>
-    /// 证书名，配置里填这个
-    /// </summary>
-    public string Name { get; set; }
-    /// <summary>
-    /// pfx 文件名，相对 Certs 目录
-    /// </summary>
-    public string File { get; set; }
-    /// <summary>
-    /// pfx 密码
-    /// </summary>
-    public string Password { get; set; }
-}
-
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(ConfigObj))]
 [JsonSerializable(typeof(InstanceObj))]
@@ -149,8 +127,6 @@ internal class CertItemObj
 [JsonSerializable(typeof(InitAccountReqObj))]
 [JsonSerializable(typeof(AddAccountReqObj))]
 [JsonSerializable(typeof(ChangePasswordReqObj))]
-[JsonSerializable(typeof(CertFileObj))]
-[JsonSerializable(typeof(CertItemObj))]
 [JsonSerializable(typeof(DebugMessageObj))]
 internal partial class SourceGenerationContext : JsonSerializerContext
 {

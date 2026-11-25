@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Crypto;
+using PlugBotSharp.QQProxy.Crypto;
 using PlugBotSharp.Core.Messages;
 
 namespace PlugBotSharp.QQProxy;

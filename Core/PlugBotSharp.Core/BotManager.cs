@@ -78,6 +78,9 @@ public static class BotManager
     {
         StartTime = DateTime.Now;
 
+        // 组件通过 Api 调宿主，先把实现注入进去，测试里 Init 之后也要能用
+        ApiHost.Current = new HostApi();
+
         ConfigFile = Path.Combine(path, "Config.json");
         InstancesPath = Path.Combine(path, "Instances");
         ComponentsPath = Path.Combine(path, "Components");
@@ -112,6 +115,9 @@ public static class BotManager
         s_loaded = true;
 
         InitLog();
+
+        // 组件通过 Api 调宿主，这里把实现注入进去
+        ApiHost.Current = new HostApi();
         Logger.Info(BotLang.GetLang(BotLangKey.Init));
 
         var config = LoadConfig();
@@ -124,6 +130,7 @@ public static class BotManager
         }
 
         StateManager.Load();
+        StateRegistry.SetSaveInterval(config.StateSaveInterval);
 
         NugetManager.Scan();
 

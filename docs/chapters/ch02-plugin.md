@@ -31,7 +31,7 @@ Plugin/EchoPlugin/
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\PlugBotSharp.Core\PlugBotSharp.Core.csproj" />
+    <ProjectReference Include="..\..\Core\PlugBotSharp.Api\PlugBotSharp.Api.csproj" />
     <ProjectReference Include="..\..\build\MetaGen\MetaGen.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
@@ -40,7 +40,8 @@ Plugin/EchoPlugin/
 </Project>
 ```
 
-- 只引用 `PlugBotSharp.Core`，事件、消息模型、注册器都在里面
+- 只引用 `PlugBotSharp.Api`，接口、消息模型、注册器、句柄都在里面；宿主核心（`PlugBotSharp.Core`）由运行时提供，组件自己不带
+- 需要平台模型（比如 QQ 的键盘、卡片）再加 `qqlib` / `onebotlib` 之类的运行库
 - `MetaGen` 只参与构建（`ReferenceOutputAssembly="false"`），用来生成 `Meta.json`
 - 最后那行 Import 让构建结束后自动把清单和 dll 打成 zip
 
@@ -74,7 +75,7 @@ public static class Meta
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Plugin;
+using PlugBotSharp.Core;
 
 namespace EchoPlugin;
 

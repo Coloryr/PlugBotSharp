@@ -1,7 +1,8 @@
 using PlugBotSharp.Core;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Plugin;
 using PlugBotSharp.Core.Proxy;
+using PlugBotSharp.Core.Configs;
 
 namespace PlugBotSharp.Tests;
 

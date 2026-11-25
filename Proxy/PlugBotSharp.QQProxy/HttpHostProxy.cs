@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core;
-using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Messages;
 using PlugBotSharp.QQLib;
 

@@ -1,5 +1,3 @@
-using PlugBotSharp.Core.Http;
-
 namespace PlugBotSharp.Core;
 
 /// <summary>
@@ -55,6 +53,6 @@ public abstract class StateHandle
     /// </summary>
     public void Remove()
     {
-        StateRegistry.Remove(Owner, Name);
+        ApiHost.Host.RemoveState(Owner, Name);
     }
 }

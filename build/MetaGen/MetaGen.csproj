@@ -5,6 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <AssemblyName>PlugBotSharp.MetaGen</AssemblyName>
     <RootNamespace>PlugBotSharp.MetaGen</RootNamespace>
   </PropertyGroup>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Core.Plugin;
 using PlugBotSharp.Core.Proxy;
 
 namespace PlugBotSharp.Core;
@@ -53,7 +54,7 @@ internal sealed class ComponentRegister : IRegister
     {
         EnsureOpen();
 
-        ComponentApi.RegisterHttpPathByOwner(_owner, handler);
+        RegisterHttpPathByOwner(_owner, handler);
     }
 
     /// <inheritdoc/>
@@ -186,11 +187,50 @@ internal sealed class ComponentRegister : IRegister
     }
 
     /// <summary>
-    /// 状态落盘的位置：组件在 Configs/{id}/state.json，实例在 Instances/{uuid}/state.json
+    /// 按组件对象注册 http 接口，插件 / 代理是 /api/{id}，实例再加 uuid
+    /// </summary>
+    /// <param name="owner">组件对象</param>
+    /// <param name="call">回调</param>
+    private static void RegisterHttpPathByOwner(object owner, Func<HttpContext, Task> call)
+    {
+        switch (owner)
+        {
+            case IBasePlugin plugin when ComponentManager.FindPluginId(plugin) is { } pluginId:
+                Register("api/" + pluginId, owner, call);
+                break;
+            case IBaseProxy proxy when ComponentManager.FindProxyId(proxy) is { } proxyId:
+                Register("api/" + proxyId, owner, call);
+                break;
+            case IProxyInstasnce instance when InstanceManager.TryGetInstance(instance, out var proxyId, out var uuid):
+                Register($"api/{proxyId}/{uuid}", owner, call);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    BotLang.GetLang(BotLangKey.ComponentRegisterFail, owner.GetType().FullName));
+        }
+    }
+
+    /// <summary>
+    /// 登记一条 http 路由
+    /// </summary>
+    /// <param name="path">路径</param>
+    /// <param name="owner">组件对象</param>
+    /// <param name="call">回调</param>
+    private static void Register(string path, object owner, Func<HttpContext, Task> call)
+    {
+        ApiRegistry.Register(path, new ApiEntry
+        {
+            Owner = owner,
+            Call = call
+        });
+    }
+
+    /// <summary>
+    /// 状态落盘的位置：组件在 Configs/{id}/states.json，实例在 Instances/{uuid}/states.json
     /// </summary>
     private string StatePath => _ownUuid is { } uuid
-        ? Path.Combine(BotManager.InstancesPath, uuid.ToString(), "state.json")
-        : Path.Combine(BotManager.ConfigsPath, _id, "state.json");
+        ? Path.Combine(BotManager.InstancesPath, uuid.ToString(), "states.json")
+        : Path.Combine(BotManager.ConfigsPath, _id, "states.json");
 
     /// <summary>
     /// 注册阶段结束后不允许再注册
