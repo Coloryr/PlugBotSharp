@@ -50,6 +50,11 @@ public class ProxyInstance : IProxyInstasnce
 
     private bool _update;
 
+    /// <summary>
+    /// 拿不到凭证时下次重试的时间，避免每秒刷一次日志
+    /// </summary>
+    private DateTime _tokenRetryAt;
+
     private IProxy? _proxy;
 
     /// <summary>
@@ -195,9 +200,15 @@ public class ProxyInstance : IProxyInstasnce
 
         GetToken().GetAwaiter().GetResult();
 
+        // 没拿到凭证也先把回调服务器起来：平台至少能完成回调地址校验，凭证补上后重启实例就能发消息
         if (_token == null)
         {
-            return false;
+            Logger.Error(ProxyLang.GetLang(ProxyLangKey.TokenFail, _data.AppId, "unavailable"));
+
+            if (_data.Type == HookType.WebSocket)
+            {
+                return false;
+            }
         }
 
         switch (_data.Type)
@@ -445,6 +456,13 @@ public class ProxyInstance : IProxyInstasnce
         {
             return;
         }
+
+        // 凭证还没拿到时按退避时间重试，别每秒都打一次平台
+        if (_token == null && DateTime.Now < _tokenRetryAt)
+        {
+            return;
+        }
+
         var time = DateTime.Now;
 
         var pass = time - _lastDateTime;
@@ -523,9 +541,12 @@ public class ProxyInstance : IProxyInstasnce
         try
         {
             var data = await QQApi.GetToken(obj);
-            if (data == null || string.IsNullOrWhiteSpace(data.AccessToken) || data.Code != 0)
+            // code 缺省 / 0 都算成功，只有带了错误码才算失败
+            if (data == null || string.IsNullOrWhiteSpace(data.AccessToken) || (data.Code ?? 0) != 0)
             {
                 Logger.Error(ProxyLang.GetLang(ProxyLangKey.TokenFail, data?.Code, data?.Message));
+
+                _tokenRetryAt = DateTime.Now.AddSeconds(30);
             }
             else
             {

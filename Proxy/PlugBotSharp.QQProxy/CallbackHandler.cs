@@ -14,11 +14,6 @@ namespace PlugBotSharp.QQProxy;
 internal static class CallbackHandler
 {
     /// <summary>
-    /// 收到回调后的应答
-    /// </summary>
-    private const string Ack = """{"op":12}""";
-
-    /// <summary>
     /// 回调地址验证
     /// </summary>
     private const int OpValidation = 13;
@@ -27,6 +22,16 @@ internal static class CallbackHandler
     /// 事件推送
     /// </summary>
     private const int OpDispatch = 0;
+
+    /// <summary>
+    /// 平台签名头
+    /// </summary>
+    private const string SignatureHeader = "X-Signature-Ed25519";
+
+    /// <summary>
+    /// 平台签名时间戳头
+    /// </summary>
+    private const string TimestampHeader = "X-Signature-Timestamp";
 
     /// <summary>
     /// 处理平台回调
@@ -40,9 +45,16 @@ internal static class CallbackHandler
         await ctx.Request.Body.CopyToAsync(ms, ctx.RequestAborted);
         var body = Encoding.UTF8.GetString(ms.ToArray());
 
+        // 调试开关：打开组件配置 LogPayload 才把收到的数据原样记下来
         if (ProxyMain.LogPayload)
         {
-            ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.Callback, body));
+            ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.Callback,
+                $"{ctx.Request.Method} {ctx.Request.Path} from {ctx.Connection.RemoteIpAddress} {body}"));
+
+            foreach (var header in ctx.Request.Headers)
+            {
+                ProxyInstance.Logger.Debug($"{header.Key}: {header.Value}");
+            }
         }
 
         BaseMessageObj? obj;
@@ -53,13 +65,13 @@ internal static class CallbackHandler
         catch (JsonException e)
         {
             ProxyInstance.Logger.Error(e, ProxyLang.GetLang(ProxyLangKey.CallbackParseError));
-            await WriteAsync(ctx, Ack);
+            await WriteOkAsync(ctx);
             return;
         }
 
         if (obj == null)
         {
-            await WriteAsync(ctx, Ack);
+            await WriteOkAsync(ctx);
             return;
         }
 
@@ -69,8 +81,17 @@ internal static class CallbackHandler
             return;
         }
 
-        // 先把 op 12 回掉，插件跑得慢也不能让平台超时重推
-        await WriteAsync(ctx, Ack);
+        // 事件推送必须验签，不然谁都能伪造事件打进来
+        if (obj.OpCode == OpDispatch && !CheckSignature(ctx, instance.BotSecret, ms.ToArray()))
+        {
+            ProxyInstance.Logger.Warn(ProxyLang.GetLang(ProxyLangKey.CallbackSignatureFail));
+
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return;
+        }
+
+        // 平台只认 HTTP 200，空响应体；先回掉，插件跑得慢也不能让平台超时重推
+        await WriteOkAsync(ctx);
 
         if (obj.OpCode == OpDispatch)
         {
@@ -127,7 +148,7 @@ internal static class CallbackHandler
         if (string.IsNullOrWhiteSpace(botSecret))
         {
             ProxyInstance.Logger.Error(ProxyLang.GetLang(ProxyLangKey.BotInfoEmpty));
-            await WriteAsync(ctx, Ack);
+            await WriteOkAsync(ctx);
             return;
         }
 
@@ -140,7 +161,7 @@ internal static class CallbackHandler
         || string.IsNullOrEmpty(request.EventTs))
         {
             ProxyInstance.Logger.Error(ProxyLang.GetLang(ProxyLangKey.CallbackValidationFail));
-            await WriteAsync(ctx, Ack);
+            await WriteOkAsync(ctx);
             return;
         }
 
@@ -158,7 +179,42 @@ internal static class CallbackHandler
     }
 
     /// <summary>
-    /// 由机器人密钥派生出 32 字节种子，密钥不足 32 字节时循环拼接
+    /// 校验平台签名：签名内容是 timestamp + 原始报文，公钥由机器人密钥派生
+    /// </summary>
+    /// <param name="ctx">http 上下文</param>
+    /// <param name="botSecret">机器人密钥</param>
+    /// <param name="body">原始请求体</param>
+    private static bool CheckSignature(HttpContext ctx, string botSecret, byte[] body)
+    {
+        var signature = ctx.Request.Headers[SignatureHeader].ToString();
+        var timestamp = ctx.Request.Headers[TimestampHeader].ToString();
+
+        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(timestamp) || string.IsNullOrWhiteSpace(botSecret))
+        {
+            return false;
+        }
+
+        try
+        {
+            var sig = Convert.FromHexString(signature);
+            var ts = Encoding.UTF8.GetBytes(timestamp);
+            var message = new byte[ts.Length + body.Length];
+
+            ts.CopyTo(message, 0);
+            body.CopyTo(message, ts.Length);
+
+            var publicKey = Ed25519.PublicKeyFromSeed(DeriveSeed(botSecret));
+
+            return Ed25519.Verify(publicKey, message, sig);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 由机器人密钥派生 32 字节种子：密钥循环补齐到 32 字节，不足补、超了截断
     /// </summary>
     /// <param name="botSecret">机器人密钥</param>
     /// <returns>私钥种子</returns>
@@ -181,10 +237,33 @@ internal static class CallbackHandler
     }
 
     /// <summary>
-    /// 写 json 响应
+    /// 空响应：平台的事件推送只要求 HTTP 200
     /// </summary>
+    /// <param name="ctx">http 上下文</param>
+    private static async Task WriteOkAsync(HttpContext ctx)
+    {
+        if (ProxyMain.LogPayload)
+        {
+            ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.CallbackResponse, "HTTP 200 (empty)"));
+        }
+
+        ctx.Response.StatusCode = StatusCodes.Status200OK;
+        await ctx.Response.CompleteAsync();
+    }
+
+    /// <summary>
+    /// 写 json 响应，顺手记一条返回内容
+    /// </summary>
+    /// <param name="ctx">http 上下文</param>
+    /// <param name="json">响应体</param>
     private static async Task WriteAsync(HttpContext ctx, string json)
     {
+        // 调试开关打开时才记返回内容
+        if (ProxyMain.LogPayload)
+        {
+            ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.CallbackResponse, json));
+        }
+
         ctx.Response.ContentType = "application/json";
         await ctx.Response.WriteAsync(json, ctx.RequestAborted);
     }

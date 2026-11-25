@@ -28,6 +28,8 @@ public enum ProxyLangKey
     CallbackValidationFail,
     CallbackParseError,
     CallbackEvent,
+    CallbackResponse,
+    CallbackSignatureFail,
     SendFail,
     SendError,
     NotReady,
@@ -85,7 +87,7 @@ public static class ProxyLang
             case ProxyLangKey.HttpStartError:
                 return "http 服务器启动异常";
             case ProxyLangKey.HttpListening:
-                return "监听 http://127.0.0.1:{0}{1}";
+                return "回调地址 {0}{1}";
             case ProxyLangKey.HttpStop:
                 return "停止 http 服务器";
             case ProxyLangKey.HttpStopError:
@@ -100,6 +102,10 @@ public static class ProxyLang
                 return "回调解析失败";
             case ProxyLangKey.CallbackEvent:
                 return "收到事件 {0}";
+            case ProxyLangKey.CallbackResponse:
+                return "回调响应 {0}";
+            case ProxyLangKey.CallbackSignatureFail:
+                return "回调签名校验失败，事件已丢弃";
             case ProxyLangKey.SendFail:
                 return "发送消息失败 {0}";
             case ProxyLangKey.SendError:
@@ -154,7 +160,7 @@ public static class ProxyLang
             case ProxyLangKey.HttpStartError:
                 return "Http server start error";
             case ProxyLangKey.HttpListening:
-                return "Listening on http://127.0.0.1:{0}{1}";
+                return "Callback url {0}{1}";
             case ProxyLangKey.HttpStop:
                 return "Stop http server";
             case ProxyLangKey.HttpStopError:
@@ -169,6 +175,10 @@ public static class ProxyLang
                 return "Callback parse error";
             case ProxyLangKey.CallbackEvent:
                 return "Event {0}";
+            case ProxyLangKey.CallbackResponse:
+                return "Callback response {0}";
+            case ProxyLangKey.CallbackSignatureFail:
+                return "Callback signature verification failed, event dropped";
             case ProxyLangKey.SendFail:
                 return "Send message failed {0}";
             case ProxyLangKey.SendError:

@@ -10,6 +10,11 @@ internal static class QQApi
     public const string Url = "https://api.bot.qq.com/";
 
     /// <summary>
+    /// 取凭证走另外的域名，和业务接口不是同一个
+    /// </summary>
+    public const string TokenUrl = "https://bots.qq.com/app/getAppAccessToken";
+
+    /// <summary>
     /// Http客户端
     /// </summary>
     private readonly static HttpClient _httpClient = new();
@@ -19,7 +24,7 @@ internal static class QQApi
     /// </summary>
     public static async Task<GetAppAccessTokenResObj?> GetToken(GetAppAccessTokenObj obj)
     {
-        var res = await _httpClient.PostAsJsonAsync($"{Url}app/getAppAccessToken", obj, QQJsonContext.Default.GetAppAccessTokenObj);
+        var res = await _httpClient.PostAsJsonAsync(TokenUrl, obj, QQJsonContext.Default.GetAppAccessTokenObj);
 
         return await res.Content.ReadFromJsonAsync(QQJsonContext.Default.GetAppAccessTokenResObj);
     }

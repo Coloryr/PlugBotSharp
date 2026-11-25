@@ -27,6 +27,14 @@ public class QQCallbackTests
 
     private static async Task<string> SendAsync(string body, string secret = Secret)
     {
+        var (_, text) = await SendFullAsync(body, secret);
+
+        return text;
+    }
+
+    private static async Task<(int Status, string Body)> SendFullAsync(string body, string secret = Secret,
+        string? timestamp = null, string? signature = null)
+    {
         var folder = Path.Combine(Path.GetTempPath(), "pbs-qq-callback", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
 
@@ -43,15 +51,37 @@ public class QQCallbackTests
             ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
             ctx.Response.Body = new MemoryStream();
 
+            if (timestamp is not null)
+            {
+                ctx.Request.Headers["X-Signature-Timestamp"] = timestamp;
+            }
+
+            if (signature is not null)
+            {
+                ctx.Request.Headers["X-Signature-Ed25519"] = signature;
+            }
+
             await CallbackHandler.HandleAsync(ctx, instance);
 
             ctx.Response.Body.Position = 0;
-            return await new StreamReader(ctx.Response.Body).ReadToEndAsync();
+            var text = await new StreamReader(ctx.Response.Body).ReadToEndAsync();
+
+            return (ctx.Response.StatusCode, text);
         }
         finally
         {
             Directory.Delete(folder, true);
         }
+    }
+
+    /// <summary>
+    /// 按平台规则签一条事件报文
+    /// </summary>
+    private static string Sign(string body, string timestamp = EventTs, string secret = Secret)
+    {
+        var seed = CallbackHandler.DeriveSeed(secret);
+
+        return Convert.ToHexStringLower(Ed25519.Sign(seed, Encoding.UTF8.GetBytes(timestamp + body)));
     }
 
     private static string ValidationBody()
@@ -60,17 +90,10 @@ public class QQCallbackTests
     }
 
     [Fact]
-    public void DeriveSeed_repeats_secret_to_32_bytes()
+    public void DeriveSeed_pads_the_secret_to_32_bytes()
     {
         Assert.Equal(ExpectedSeed, Convert.ToHexStringLower(CallbackHandler.DeriveSeed(Secret)));
-    }
-
-    [Fact]
-    public void DeriveSeed_truncates_long_secret()
-    {
-        var secret = new string('a', 40);
-
-        Assert.Equal(new string('a', 32), Encoding.UTF8.GetString(CallbackHandler.DeriveSeed(secret)));
+        Assert.Equal(new string('a', 32), Encoding.UTF8.GetString(CallbackHandler.DeriveSeed(new string('a', 40))));
     }
 
     [Fact]
@@ -99,15 +122,40 @@ public class QQCallbackTests
     {
         var json = await SendAsync(ValidationBody(), "");
 
-        Assert.Equal("""{"op":12}""", json);
+        Assert.Equal("", json);
     }
 
     [Fact]
     public async Task Event_push_returns_ack()
     {
-        var json = await SendAsync("""{"op":0,"t":"GROUP_AT_MESSAGE_CREATE","d":{"id":"123"}}""");
+        const string body = """{"op":0,"t":"GROUP_AT_MESSAGE_CREATE","d":{"id":"123"}}""";
 
-        Assert.Equal("""{"op":12}""", json);
+        var (status, json) = await SendFullAsync(body, Secret, EventTs, Sign(body));
+
+        Assert.Equal(200, status);
+        Assert.Equal("", json);
+    }
+
+    [Fact]
+    public async Task Event_without_signature_is_rejected()
+    {
+        const string body = """{"op":0,"t":"GROUP_AT_MESSAGE_CREATE","d":{"id":"123"}}""";
+
+        var (status, json) = await SendFullAsync(body, Secret, EventTs);
+
+        Assert.Equal(403, status);
+        Assert.Equal("", json);
+    }
+
+    [Fact]
+    public async Task Event_with_wrong_signature_is_rejected()
+    {
+        const string body = """{"op":0,"t":"GROUP_AT_MESSAGE_CREATE","d":{"id":"123"}}""";
+
+        var (status, json) = await SendFullAsync(body, Secret, EventTs, new string('0', 128));
+
+        Assert.Equal(403, status);
+        Assert.Equal("", json);
     }
 
     [Fact]
@@ -124,11 +172,14 @@ public class QQCallbackTests
                 return [new TextMessage("reply")];
             });
 
-            var json = await SendAsync("""
+            const string body = """
                 {"op":0,"t":"GROUP_AT_MESSAGE_CREATE","d":{"id":"msg-1","content":"/text","group_openid":"GROUP","author":{"member_openid":"SENDER"}}}
-                """);
+                """;
 
-            Assert.Equal("""{"op":12}""", json);
+            var (status, json) = await SendFullAsync(body, Secret, EventTs, Sign(body));
+
+            Assert.Equal(200, status);
+            Assert.Equal("", json);
 
             // 事件是后台处理的，等一小会儿
             for (var i = 0; i < 100 && received is null; i++)
@@ -152,7 +203,7 @@ public class QQCallbackTests
     {
         var json = await SendAsync("not json");
 
-        Assert.Equal("""{"op":12}""", json);
+        Assert.Equal("", json);
     }
 
     [Fact]
@@ -160,6 +211,6 @@ public class QQCallbackTests
     {
         var json = await SendAsync("""{"op":13}""");
 
-        Assert.Equal("""{"op":12}""", json);
+        Assert.Equal("", json);
     }
 }

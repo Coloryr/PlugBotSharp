@@ -63,9 +63,10 @@ public class HttpHostProxy : IProxy
     {
         ProxyInstance.Logger.Info(ProxyLang.GetLang(ProxyLangKey.HttpStart));
 
+        // 平台的回调从公网打进来，不能只听 127.0.0.1
         _server ??= ComponentApi.StartServer(_instance, new ServerOptions
         {
-            Host = "127.0.0.1",
+            Host = "0.0.0.0",
             Port = port,
             Certificate = certificate,
             CertificatePassword = certificatePassword
