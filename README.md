@@ -95,13 +95,13 @@ PlugBotSharp.QQProxy.dll
 - 「实例」页创建实例，点「设置」填 Url、Token、AppId 这类参数
 - 保存设置会自动重载，也可以单独点「重载」或「禁用 / 启用」
 
-组件的清单字段、依赖声明和打包方式见 [组件和打包](docs/package.md)。
+组件的清单字段、依赖声明和打包方式见 [组件和打包](docs/reference/package.md)。
 
 ## 管理面板
 
 | 页签 | 功能 |
 | --- | --- |
-| 概览 | 运行时长、组件 / 实例数量、核心版本，组件 / 实例的实时状态面板，以及两者自定义状态的总表 |
+| 概览 | 运行时长、组件 / 实例数量、核心版本，组件 / 实例的实时状态面板，以及按对象分组的自定义状态监控卡片 |
 | 组件 | 组件列表、zip 安装、加载、卸载、启用、禁用、重载、删除、按类型筛选、设置 |
 | 实例 | 创建实例、加载、启用、禁用、重载、删除、设置 |
 | 账户 | 添加账户、修改 / 重置密码、删除账户、查看和撤销登录会话 |
@@ -140,8 +140,24 @@ PlugBotSharp.QQProxy.dll
 
 ## 文档
 
-- [开发文档](docs/README.md)：先选插件还是代理、快速上手、生命周期、组件能用的 API
-- [写插件](docs/plugin.md) / [写代理](docs/proxy.md) / [写运行库](docs/lib.md)
-- [组件清单和打包](docs/package.md)：`Meta.json`、依赖、NuGet、打包和安装
-- [组件接口和 API](docs/api.md)：接口定义、`IRegister`、句柄、`ComponentApi`、http、证书
-- [工程结构、构建和运行](docs/runtime.md)：项目结构、运行目录、启停与重载、面板 HTTP 接口、已知限制
+**教程**（按章读，从写第一个插件到发布）：
+
+- [第一章 快速上手](docs/README.md)：选插件还是代理、最小插件 / 代理、生命周期
+- [第二章 完整插件制作](docs/chapters/ch02-plugin.md)：建工程、消息解析、消息发送、配置、状态、打包安装
+- [第三章 写一个代理](docs/chapters/ch03-proxy.md)
+- [第四章 写一个运行库](docs/chapters/ch04-lib.md)
+- [第五章 自定义事件](docs/chapters/ch05-events.md)
+- [第六章 配置文件](docs/chapters/ch06-config.md)
+- [第七章 自定义数据](docs/chapters/ch07-state.md)
+- [第八章 远程调试](docs/chapters/ch08-debug.md)
+- [第九章 依赖库和运行库](docs/chapters/ch09-deps.md)
+- [第十章 打包与发布](docs/chapters/ch10-package.md)
+- [第十一章 ComponentApi 进阶](docs/chapters/ch11-componentapi.md)：查 / 管别的组件和实例
+
+**参考手册**（按主题查）：
+
+- [消息与插件](docs/reference/plugin.md)：消息类型清单、平台消息、DemoPlugin
+- [代理实现](docs/reference/proxy.md)：消息模型、分发链路、QQ / OneBot / GsCore
+- [清单与打包](docs/reference/package.md)：`Meta.json`、依赖、NuGet、打包安装
+- [接口与 API](docs/reference/api.md)：接口表、`IRegister`、`ComponentApi`、http、证书
+- [运行与构建](docs/reference/runtime.md)：工程结构、运行目录、启停重载、面板接口、已知限制

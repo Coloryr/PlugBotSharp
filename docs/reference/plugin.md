@@ -1,8 +1,10 @@
-# 写插件
+# 参考：插件与消息
+
+教程式的插件写法见[第二章](../chapters/ch02-plugin.md)和[第五章](../chapters/ch05-events.md)。
 
 插件处理消息：收到消息、判断要不要回、回什么。插件看不到平台协议，用的是统一消息模型，所以同一个插件在 QQ、OneBot、gsuid_core 上都能跑。
 
-例子：[DemoPlugin](../Plugin/DemoPlugin)，里面每个命令对应一种消息体。
+例子：[DemoPlugin](../../Plugin/DemoPlugin)，里面每个命令对应一种消息体。
 
 ## 接口和生命周期
 
@@ -98,7 +100,7 @@ return [new RawMessage(QQMessage.SendName, JsonSerializer.SerializeToNode(obj, Q
 
 ## DemoPlugin 的命令
 
-[DemoPlugin](../Plugin/DemoPlugin) 里每个命令对应一种消息体，可以直接当模板抄：
+[DemoPlugin](../../Plugin/DemoPlugin) 里每个命令对应一种消息体，可以直接当模板抄：
 
 | 命令 | 发出的消息 |
 | --- | --- |
@@ -136,13 +138,13 @@ await _send.SendAsync(context, new TextMessage("主动发出去的消息"));
 
 - 发出去之前同样会过所有插件的发送拦截器
 - 从插件里拿到的句柄可以发给任意代理；代理 / 实例拿到的句柄不能填自己的代理 id，填了直接抛异常
-- 不知道实例 uuid 时可以用 `ComponentApi.GetInstances()` 查（见 [api.md](api.md)）
+- 不知道实例 uuid 时可以用 `ComponentApi.GetInstances()` 查（见 [api.md](./api.md)）
 
 ## 配置、状态和事件
 
-- 配置项：`ConfigMap()` 声明，`UpdateMap()` 接收，面板自动生成表单，见 [api.md](api.md#组件和实例的设置)
-- 状态：`RegisterState` / `RegisterKvState`，面板上显示成标签和表格，见 [api.md](api.md#自定义状态)
-- 自定义事件：`RegisterPluginEvent` 注册，别的组件按 `[组件id]事件id` 订阅，见 [api.md](api.md#事件)
+- 配置项：`ConfigMap()` 声明，`UpdateMap()` 接收，面板自动生成表单，见 [api.md](./api.md#组件和实例的设置)
+- 状态：`RegisterState` / `RegisterKvState`，面板上显示成标签和表格，见 [api.md](./api.md#自定义状态)
+- 自定义事件：`RegisterPluginEvent` 注册，别的组件按 `[组件id]事件id` 订阅，见 [api.md](./api.md#事件)
 
 ## 注意
 

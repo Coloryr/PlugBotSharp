@@ -80,6 +80,9 @@
     <ItemGroup>
       <_ComponentDllFile Include="@(ComponentDll->'$(TargetDir)%(Identity)')" />
       <_ComponentDllMissing Include="@(_ComponentDllFile)" Condition="!Exists('%(FullPath)')" />
+      <!-- 有 pdb 就跟着打进去，调试时才能断点；用了 DebugType=embedded 时没有 pdb，不影响 -->
+      <_ComponentPdbCandidate Include="@(_ComponentDllFile->'%(RootDir)%(Directory)%(Filename).pdb')" />
+      <_ComponentPdbFile Include="@(_ComponentPdbCandidate)" Condition="Exists('%(FullPath)')" />
     </ItemGroup>
 
     <Error Condition="'@(_ComponentDllMissing)' != ''" Text="清单里列出的文件不存在：@(_ComponentDllMissing)" />
@@ -88,6 +91,8 @@
 
     <Copy SourceFiles="$(ComponentManifest)" DestinationFiles="$(ComponentStageDir)$(ComponentManifestName)" />
     <Copy SourceFiles="@(_ComponentDllFile)" DestinationFolder="$(ComponentStageDir)" Condition="'@(_ComponentDllFile)' != ''" />
+    <Copy SourceFiles="@(_ComponentPdbFile)" DestinationFolder="$(ComponentStageDir)" Condition="'@(_ComponentPdbFile)' != ''" />
+    <Message Importance="high" Text="Component symbols: %(_ComponentPdbFile.Filename)%(_ComponentPdbFile.Extension)" Condition="'@(_ComponentPdbFile)' != ''" />
 
     <Delete Files="$(ComponentPackagePath)" />
     <ZipDirectory SourceDirectory="$(ComponentStageDir)" DestinationFile="$(ComponentPackagePath)" />

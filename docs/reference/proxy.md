@@ -1,8 +1,10 @@
-# 写代理
+# 参考：代理实现
+
+教程式的代理写法见[第三章](../chapters/ch03-proxy.md)。
 
 代理接一个平台：登录、收事件、把消息翻译成统一模型交给插件，再把插件返回的消息翻译成平台格式发出去。代理里不写业务逻辑。
 
-例子：[ProxyDemo](../Proxy/ProxyDemo)，一个用 http 收发消息的完整代理，代码不到 300 行。
+例子：[ProxyDemo](../../Proxy/ProxyDemo)，一个用 http 收发消息的完整代理，代码不到 300 行。
 
 ## 接口
 
@@ -45,7 +47,7 @@ public class DemoInstance : IProxyInstasnce
 
 - 代理组件启用后才能创建实例；组件禁用时它的实例会全部停掉
 - 实例的 `Init(path, uuid)` 收到的是实例目录 `Instances/{uuid}`，账号配置写这里
-- 组件配置和实例配置都可以用面板表单，见 [api.md](api.md#组件和实例的设置)
+- 组件配置和实例配置都可以用面板表单，见 [api.md](./api.md#组件和实例的设置)
 
 ## 消息模型
 

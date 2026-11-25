@@ -172,49 +172,72 @@ body {
   margin-bottom: 16px;
 }
 
-.panel .table {
-  margin-top: 4px;
+.state-group + .state-group {
+  margin-top: 16px;
 }
 
-.state-table th,
-.state-table td {
-  padding: 8px 10px;
+.state-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 4px 0 10px;
 }
 
-.inline-kv > summary {
+.state-grid {
+  margin-bottom: 0;
+}
+
+.state-card {
+  background: #fafbfc;
+}
+
+.state-card .value {
+  font-size: 19px;
+  overflow-wrap: anywhere;
+}
+
+.state-card .hint {
+  overflow-wrap: anywhere;
+}
+
+.card-kv {
+  margin-top: 8px;
+}
+
+.card-kv > summary {
   cursor: pointer;
   font-size: 12px;
   color: var(--accent);
   list-style: none;
 }
 
-.inline-kv > summary::-webkit-details-marker {
+.card-kv > summary::-webkit-details-marker {
   display: none;
 }
 
-.inline-kv .kv-table {
+.card-kv .kv-table {
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin-top: 4px;
-  max-height: 140px;
+  max-height: 160px;
   overflow: auto;
 }
 
-.inline-kv .kv-line {
+.card-kv .kv-line {
   display: flex;
   gap: 10px;
   color: #57606a;
 }
 
-.inline-kv .kv-key {
-  max-width: 220px;
+.card-kv .kv-key {
+  max-width: 180px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.inline-kv .kv-value {
+.card-kv .kv-value {
   margin-left: auto;
   font-weight: 600;
 }
