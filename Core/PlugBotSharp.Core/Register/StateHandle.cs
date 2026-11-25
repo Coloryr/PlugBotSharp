@@ -15,13 +15,20 @@ public abstract class StateHandle
     /// <param name="name">状态名，面板接口里当键用</param>
     /// <param name="label">面板上显示的名字，空时用状态名</param>
     /// <param name="description">面板上的解释</param>
-    internal StateHandle(object owner, string name, string label, string description)
+    /// <param name="storePath">落盘路径，宿主会自动把值存到这里</param>
+    internal StateHandle(object owner, string name, string label, string description, string storePath)
     {
         Owner = owner;
         Name = name;
         Label = string.IsNullOrWhiteSpace(label) ? name : label;
         Description = description ?? "";
+        StorePath = storePath;
     }
+
+    /// <summary>
+    /// 落盘路径，宿主自动保存用
+    /// </summary>
+    internal string StorePath { get; }
 
     /// <summary>
     /// 状态名，也是面板接口里的键

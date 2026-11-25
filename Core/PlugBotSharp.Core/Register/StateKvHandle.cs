@@ -15,9 +15,19 @@ public sealed class StateKvHandle : StateHandle
     /// <param name="name">状态名，面板接口里当键用</param>
     /// <param name="label">面板上显示的名字，空时用状态名</param>
     /// <param name="description">面板上的解释</param>
-    internal StateKvHandle(object owner, string name, string label, string description)
-        : base(owner, name, label, description)
+    /// <param name="storePath">落盘路径</param>
+    internal StateKvHandle(object owner, string name, string label, string description, string storePath)
+        : base(owner, name, label, description, storePath)
     {
+    }
+
+    /// <summary>
+    /// 当前键值，重启后是上次落盘的值
+    /// </summary>
+    public IReadOnlyDictionary<string, object?> Get()
+    {
+        return StateRegistry.GetValue(Owner, Name) as IReadOnlyDictionary<string, object?>
+            ?? new Dictionary<string, object?>();
     }
 
     /// <summary>

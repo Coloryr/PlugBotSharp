@@ -36,12 +36,32 @@ public class GenshinInstance : IProxyInstasnce
     /// <summary>
     /// 收到 core 下发的消息条数，作为状态上报
     /// </summary>
-    private int _received;
+    private long _received;
+
+    /// <summary>
+    /// 发给 core 的消息条数
+    /// </summary>
+    private long _sent;
+
+    /// <summary>
+    /// 当前是否连着 core
+    /// </summary>
+    private bool _connected;
 
     /// <summary>
     /// 收到条数的状态句柄
     /// </summary>
     private StateValueHandle? _receiveState;
+
+    /// <summary>
+    /// 发出条数的状态句柄
+    /// </summary>
+    private StateValueHandle? _sendState;
+
+    /// <summary>
+    /// 连接状态的状态句柄
+    /// </summary>
+    private StateValueHandle? _connectedState;
 
     /// <summary>
     /// 发出去的消息 id -> 发起的实例，core 的回复会带回同一个 msg_id
@@ -106,8 +126,18 @@ public class GenshinInstance : IProxyInstasnce
         _event = register.RegisterProxyEvent();
         _send = register.RegisterSend();
 
-        // 收到 core 下发的消息条数
-        _receiveState = register.RegisterState("recv", "收到条数", "gsuid_core 下发的消息条数");
+        // 状态：连接情况 + 收发条数，重新注册时把落盘的值带回来
+        _connectedState = register.RegisterState("connected", "连接状态", "是否连上了 gsuid_core，断开时自动重连");
+        _receiveState = register.RegisterState("recv", "收到条数", "gsuid_core 下发的消息条数，重启后接着累计");
+        _sendState = register.RegisterState("sent", "发出条数", "转给 gsuid_core 的消息条数，重启后接着累计");
+
+        // 宿主会把状态落盘，注册时读回上次的累计值接着数
+        _received = ToLong(_receiveState.Get());
+        _sent = ToLong(_sendState.Get());
+
+        _receiveState.Set(_received);
+        _sendState.Set(_sent);
+        _connectedState.Set(_connected);
     }
 
     /// <inheritdoc/>
@@ -535,6 +565,9 @@ public class GenshinInstance : IProxyInstasnce
         try
         {
             await _client.SendAsync(message);
+
+            _sent++;
+            _sendState?.Set(_sent);
         }
         catch (Exception e)
         {
@@ -553,6 +586,9 @@ public class GenshinInstance : IProxyInstasnce
 
         client.StateChanged += connected =>
         {
+            _connected = connected;
+            _connectedState?.Set(connected);
+
             if (connected)
             {
                 GenshinLang.Log.Info(GenshinLang.Get(GenshinLangKey.Connected, _data.Url));
@@ -577,6 +613,15 @@ public class GenshinInstance : IProxyInstasnce
         {
             GenshinLang.Log.Warn(GenshinLang.Get(GenshinLangKey.ConnectFail, url, e.Message));
         }
+    }
+
+    /// <summary>
+    /// 状态值转 long，读不到就当 0
+    /// </summary>
+    /// <param name="value">状态值</param>
+    private static long ToLong(object? value)
+    {
+        return value is null ? 0 : Convert.ToInt64(value);
     }
 
     /// <summary>

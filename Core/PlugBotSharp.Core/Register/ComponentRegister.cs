@@ -139,10 +139,10 @@ internal sealed class ComponentRegister : IRegister
 
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var handle = new StateValueHandle(_owner, name, label, description);
+        var handle = new StateValueHandle(_owner, name, label, description, StatePath);
 
-        // 先把名字和描述记下来，值还没上报时面板上也能看到
-        StateRegistry.Declare(_owner, name, StateRegistry.ValueKind, handle.Label, handle.Description);
+        // 先把名字和描述记下来，同时把上次落盘的值读回来
+        StateRegistry.Declare(_owner, name, StateRegistry.ValueKind, handle.Label, handle.Description, handle.StorePath);
 
         return handle;
     }
@@ -154,9 +154,9 @@ internal sealed class ComponentRegister : IRegister
 
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var handle = new StateKvHandle(_owner, name, label, description);
+        var handle = new StateKvHandle(_owner, name, label, description, StatePath);
 
-        StateRegistry.Declare(_owner, name, StateRegistry.KvKind, handle.Label, handle.Description);
+        StateRegistry.Declare(_owner, name, StateRegistry.KvKind, handle.Label, handle.Description, handle.StorePath);
 
         return handle;
     }
@@ -184,6 +184,13 @@ internal sealed class ComponentRegister : IRegister
 
         return new SendHandle(_ownProxyId, _ownUuid, ownerId);
     }
+
+    /// <summary>
+    /// 状态落盘的位置：组件在 Configs/{id}/state.json，实例在 Instances/{uuid}/state.json
+    /// </summary>
+    private string StatePath => _ownUuid is { } uuid
+        ? Path.Combine(BotManager.InstancesPath, uuid.ToString(), "state.json")
+        : Path.Combine(BotManager.ConfigsPath, _id, "state.json");
 
     /// <summary>
     /// 注册阶段结束后不允许再注册

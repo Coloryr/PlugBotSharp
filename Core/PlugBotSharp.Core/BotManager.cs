@@ -3,6 +3,7 @@ using NLog.Config;
 using NLog.Targets;
 using PlugBotSharp.Core.Auth;
 using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Nuget;
 
 namespace PlugBotSharp.Core;
@@ -163,6 +164,7 @@ public static class BotManager
                     Logger.Info(BotLang.GetLang(BotLangKey.Stopping));
 
                     SessionManager.Save();
+                    StateRegistry.Flush();
                     HttpManager.Stop();
                     InstanceManager.Stop();
                     ComponentManager.Stop();
