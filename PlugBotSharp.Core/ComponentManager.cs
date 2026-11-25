@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using PlugBotSharp.Core.Configs;
@@ -287,6 +287,60 @@ internal static class ComponentManager
     }
 
     /// <summary>
+    /// 重载组件配置：Disable → Reload → Enable
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <returns>组件不存在或者重载失败时返回 false</returns>
+    internal static bool ReloadComponent(string id)
+    {
+        if (Plugins.TryGetValue(id, out var plugin))
+        {
+            var pluginEnabled = plugin.State == ComponentState.Enabled;
+
+            if (pluginEnabled && !DisableComponent(id))
+            {
+                return false;
+            }
+
+            if (!Guard(id, () =>
+            {
+                plugin.Reload();
+                return true;
+            }))
+            {
+                return false;
+            }
+
+            return !pluginEnabled || EnableComponent(id);
+        }
+
+        if (!Proxys.TryGetValue(id, out var proxy))
+        {
+            BotManager.Logger?.Warn(BotLang.GetLang(BotLangKey.ComponentNotSupported, id));
+            return false;
+        }
+
+        var enabled = proxy.State == ComponentState.Enabled;
+
+        // 先停掉，重新读配置后按原来的启用状态恢复
+        if (enabled && !DisableComponent(id))
+        {
+            return false;
+        }
+
+        if (!Guard(id, () =>
+        {
+            proxy.Reload();
+            return true;
+        }))
+        {
+            return false;
+        }
+
+        return !enabled || EnableComponent(id);
+    }
+
+    /// <summary>
     /// 执行组件代码，异常时记日志并当作失败
     /// </summary>
     /// <param name="id">组件 id</param>
@@ -432,6 +486,72 @@ internal static class ComponentManager
         var path = Path.Combine(BotManager.ConfigsPath, id);
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    /// <summary>
+    /// 读取组件的配置项，交给网页端渲染
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <param name="map">配置项</param>
+    /// <returns>组件不存在或者不支持配置时返回 false</returns>
+    internal static bool TryGetConfigMap(string id, out Dictionary<string, ConfigMap> map)
+    {
+        map = [];
+
+        if (FindComponent(id) is not { } component)
+        {
+            return false;
+        }
+
+        try
+        {
+            map = component.ConfigMap();
+            return true;
+        }
+        catch (Exception e)
+        {
+            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.ComponentActionFail, id));
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 保存网页端提交的配置项
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <param name="map">配置项</param>
+    /// <returns>组件不存在或者保存失败时返回 false</returns>
+    internal static bool TryUpdateConfigMap(string id, Dictionary<string, ConfigMap> map)
+    {
+        if (FindComponent(id) is not { } component)
+        {
+            return false;
+        }
+
+        return Guard(id, () =>
+        {
+            component.UpdateMap(map);
+            return true;
+        });
+    }
+
+    /// <summary>
+    /// 取组件的通用接口，插件和代理都实现了 IBaseComponent
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    private static IBaseComponent? FindComponent(string id)
+    {
+        if (Plugins.TryGetValue(id, out var plugin))
+        {
+            return plugin.Plugin;
+        }
+
+        if (Proxys.TryGetValue(id, out var proxy))
+        {
+            return proxy.Proxy;
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -9,8 +9,11 @@ public enum ProxyLangKey
     InstanceInit,
 
     StartLoad,
+    Reload,
     ConfigRead,
     ConfigReadError,
+    ConfigSave,
+    ConfigSaveError,
     Enable,
     Disable,
     BotInfoEmpty,
@@ -25,6 +28,9 @@ public enum ProxyLangKey
     CallbackValidationFail,
     CallbackParseError,
     CallbackEvent,
+    SendFail,
+    SendError,
+    NotReady,
 
     TokenFail,
     TokenError,
@@ -56,10 +62,16 @@ public static class ProxyLang
 
             case ProxyLangKey.StartLoad:
                 return "开始加载";
+            case ProxyLangKey.Reload:
+                return "重载配置";
             case ProxyLangKey.ConfigRead:
                 return "配置读取完成";
             case ProxyLangKey.ConfigReadError:
                 return "配置读取失败";
+            case ProxyLangKey.ConfigSave:
+                return "配置已保存";
+            case ProxyLangKey.ConfigSaveError:
+                return "配置保存失败";
             case ProxyLangKey.Enable:
                 return "启用";
             case ProxyLangKey.Disable:
@@ -87,6 +99,12 @@ public static class ProxyLang
                 return "回调解析失败";
             case ProxyLangKey.CallbackEvent:
                 return "收到事件 {0}";
+            case ProxyLangKey.SendFail:
+                return "发送消息失败 {0}";
+            case ProxyLangKey.SendError:
+                return "发送消息异常 {0}";
+            case ProxyLangKey.NotReady:
+                return "实例未启用，消息不回复";
 
             case ProxyLangKey.TokenFail:
                 return "获取凭证失败 {0} {1}";
@@ -111,10 +129,16 @@ public static class ProxyLang
 
             case ProxyLangKey.StartLoad:
                 return "Start load";
+            case ProxyLangKey.Reload:
+                return "Reload config";
             case ProxyLangKey.ConfigRead:
                 return "Config loaded";
             case ProxyLangKey.ConfigReadError:
                 return "Config read error";
+            case ProxyLangKey.ConfigSave:
+                return "Config saved";
+            case ProxyLangKey.ConfigSaveError:
+                return "Config save error";
             case ProxyLangKey.Enable:
                 return "Enable";
             case ProxyLangKey.Disable:
@@ -142,6 +166,12 @@ public static class ProxyLang
                 return "Callback parse error";
             case ProxyLangKey.CallbackEvent:
                 return "Event {0}";
+            case ProxyLangKey.SendFail:
+                return "Send message failed {0}";
+            case ProxyLangKey.SendError:
+                return "Send message error {0}";
+            case ProxyLangKey.NotReady:
+                return "Instance is not enabled, messages are ignored";
 
             case ProxyLangKey.TokenFail:
                 return "Get token failed {0} {1}";

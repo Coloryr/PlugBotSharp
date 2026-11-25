@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -77,6 +77,18 @@ internal class AdminInstanceObj
 [JsonSerializable(typeof(AddAccountReqObj))]
 [JsonSerializable(typeof(ChangePasswordReqObj))]
 internal partial class SourceGenerationContext : JsonSerializerContext
+{
+
+}
+
+/// <summary>
+/// 配置项定义的序列化，字段用 camelCase，和面板其他接口保持一致
+/// </summary>
+[JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true)]
+[JsonSerializable(typeof(ConfigMap))]
+[JsonSerializable(typeof(List<ConfigMap>))]
+[JsonSerializable(typeof(Dictionary<string, ConfigMap>))]
+internal partial class ConfigMapContext : JsonSerializerContext
 {
 
 }

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PlugBotSharp.Core\PlugBotSharp.Core.csproj" />
+    <ProjectReference Include="..\PlugBotSharp.QQLib\PlugBotSharp.QQLib.csproj" />
     <ProjectReference Include="..\build\MetaGen\MetaGen.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

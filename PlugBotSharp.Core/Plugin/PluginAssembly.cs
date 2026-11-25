@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using PlugBotSharp.Core.Configs;
@@ -71,6 +71,16 @@ internal class PluginAssembly : BaseAssembly
 
         State = ComponentState.Loaded;
         Trace(BotLangKey.ComponentLoaded);
+        RaiseEvent(PluginEventType.Loaded);
+
+        try
+        {
+            Plugin.RegisterEventHook();
+        }
+        catch (Exception e)
+        {
+            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.ComponentActionFail, Meta.Id));
+        }
 
         return true;
     }
@@ -97,8 +107,17 @@ internal class PluginAssembly : BaseAssembly
 
         State = ComponentState.Enabled;
         StateManager.SetComponentEnabled(Meta.Id, true);
+        RaiseEvent(PluginEventType.Enabled);
 
         return true;
+    }
+
+    /// <summary>
+    /// 重载配置
+    /// </summary>
+    public void Reload()
+    {
+        Plugin.Reload();
     }
 
     /// <summary>
@@ -120,12 +139,26 @@ internal class PluginAssembly : BaseAssembly
         {
             State = ComponentState.Disabled;
             ApiRegistry.Unregister(Plugin);
+            RaiseEvent(PluginEventType.Disabled);
 
             if (persist)
             {
                 StateManager.SetComponentEnabled(Meta.Id, false);
             }
         }
+    }
+
+    /// <summary>
+    /// 广播插件生命周期事件
+    /// </summary>
+    /// <param name="type">事件类型</param>
+    private void RaiseEvent(PluginEventType type)
+    {
+        EventManager.HandlePlugin(new PluginEvent
+        {
+            Id = Meta.Id,
+            Type = type
+        });
     }
 
     /// <summary>
@@ -146,6 +179,8 @@ internal class PluginAssembly : BaseAssembly
         {
             State = ComponentState.Unloaded;
             ApiRegistry.Unregister(Plugin);
+            EventManager.Unregister(Plugin);
+            RaiseEvent(PluginEventType.Unloaded);
         }
     }
 }

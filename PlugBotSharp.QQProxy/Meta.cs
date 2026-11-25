@@ -1,4 +1,4 @@
-﻿using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Core.Configs;
 
 public static class Meta
 {
@@ -13,6 +13,9 @@ public static class Meta
         [
             "PlugBotSharp.QQProxy.dll"
         ],
-        Deps = []
+        Deps =
+        [
+            new DepInfoObj { Type = DepType.Component, Id = "qqlib", Version = ">=1.0.0" }
+        ]
     };
 }

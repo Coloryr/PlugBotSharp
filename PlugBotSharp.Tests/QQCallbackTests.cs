@@ -2,7 +2,9 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
 using NLog;
+using PlugBotSharp.Core;
 using PlugBotSharp.Core.Crypto;
+using PlugBotSharp.Core.Messages;
 using PlugBotSharp.QQProxy;
 
 namespace PlugBotSharp.Tests;
@@ -25,14 +27,31 @@ public class QQCallbackTests
 
     private static async Task<string> SendAsync(string body, string secret = Secret)
     {
-        var ctx = new DefaultHttpContext();
-        ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
-        ctx.Response.Body = new MemoryStream();
+        var folder = Path.Combine(Path.GetTempPath(), "pbs-qq-callback", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
 
-        await CallbackHandler.HandleAsync(ctx, secret);
+        try
+        {
+            File.WriteAllText(Path.Combine(folder, "config.json"),
+                $$"""{"AppId":"102000001","AppSecret":"{{secret}}","Port":10000,"Type":0}""");
 
-        ctx.Response.Body.Position = 0;
-        return await new StreamReader(ctx.Response.Body).ReadToEndAsync();
+            var instance = new ProxyInstance("qq");
+            instance.Init(folder, Guid.NewGuid());
+            instance.Load();
+
+            var ctx = new DefaultHttpContext();
+            ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+            ctx.Response.Body = new MemoryStream();
+
+            await CallbackHandler.HandleAsync(ctx, instance);
+
+            ctx.Response.Body.Position = 0;
+            return await new StreamReader(ctx.Response.Body).ReadToEndAsync();
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
     }
 
     private static string ValidationBody()
@@ -89,6 +108,43 @@ public class QQCallbackTests
         var json = await SendAsync("""{"op":0,"t":"GROUP_AT_MESSAGE_CREATE","d":{"id":"123"}}""");
 
         Assert.Equal("""{"op":12}""", json);
+    }
+
+    [Fact]
+    public async Task Event_push_reaches_the_message_hooks()
+    {
+        var owner = new object();
+        ProxyMessage? received = null;
+
+        try
+        {
+            EventManager.RegisterMessageHook(owner, message =>
+            {
+                received = message;
+                return [new TextMessage("reply")];
+            });
+
+            var json = await SendAsync("""
+                {"op":0,"t":"GROUP_AT_MESSAGE_CREATE","d":{"id":"msg-1","content":"/text","group_openid":"GROUP","author":{"member_openid":"SENDER"}}}
+                """);
+
+            Assert.Equal("""{"op":12}""", json);
+
+            // 事件是后台处理的，等一小会儿
+            for (var i = 0; i < 100 && received is null; i++)
+            {
+                await Task.Delay(20);
+            }
+
+            Assert.NotNull(received);
+            Assert.Equal("GROUP", received!.Target);
+            Assert.Equal("SENDER", received.Sender);
+            Assert.Equal("/text", Assert.IsType<TextMessage>(received.Message).Text);
+        }
+        finally
+        {
+            EventManager.Unregister(owner);
+        }
     }
 
     [Fact]

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { notify } from '../toast'
+import ConfigDialog from './ConfigDialog.vue'
 
 const instances = ref([])
 const proxies = ref([])
@@ -9,6 +10,7 @@ const loading = ref(false)
 const error = ref('')
 const busy = ref('')
 const form = ref({ proxy: '', name: '' })
+const configTarget = ref(null)
 
 const availableProxies = computed(() => proxies.value.filter(x => x.type === 'Proxy' && x.loaded && x.enabled))
 
@@ -187,10 +189,23 @@ onBeforeUnmount(() => {
               {{ item.enabled ? '禁用' : '启用' }}
             </button>
 
+            <button v-if="item.loaded" class="btn" :disabled="!!busy" @click="configTarget = item">设置</button>
+            <button v-if="item.loaded" class="btn" :disabled="!!busy" @click="act(item, 'reload', '重载')">重载</button>
+
             <button class="btn danger" :disabled="!!busy" @click="remove(item)">删除</button>
           </td>
         </tr>
       </tbody>
     </table>
+    <ConfigDialog
+      :open="!!configTarget"
+      title="实例设置"
+      :sub="configTarget ? `${configTarget.name || '未命名'}（${configTarget.uuid}）` : ''"
+      note="保存后自动重载实例配置"
+      :path="configTarget ? `admin/instances/${configTarget.uuid}/config` : ''"
+      :reload-path="configTarget ? `admin/instances/${configTarget.uuid}/reload` : ''"
+      @close="configTarget = null"
+      @done="refresh"
+    />
   </section>
 </template>

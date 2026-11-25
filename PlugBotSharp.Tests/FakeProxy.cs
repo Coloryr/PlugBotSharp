@@ -1,3 +1,4 @@
+using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Proxy;
 
 namespace PlugBotSharp.Tests;
@@ -9,6 +10,8 @@ internal sealed class FakeProxy : IBaseProxy
 {
     public int EnableCount { get; private set; }
     public int DisableCount { get; private set; }
+    public int ReloadCount { get; private set; }
+    public int InstanceReloadCount { get; private set; }
 
     public bool Init(string path) => true;
 
@@ -16,10 +19,44 @@ internal sealed class FakeProxy : IBaseProxy
 
     public bool Unload() => true;
 
-    public IProxyInstasnce CreateInstance() => new FakeInstance();
+    /// <summary>
+    /// 最近一次创建的实例，测试里用来拿实例对象
+    /// </summary>
+    public FakeInstance? LastInstance { get; private set; }
 
-    public void ConfigInstance(IProxyInstasnce instasnce)
+    public IProxyInstasnce CreateInstance()
     {
+        LastInstance = new FakeInstance();
+
+        return LastInstance;
+    }
+
+    public void Reload()
+    {
+        ReloadCount++;
+    }
+
+    public void Reload(IProxyInstasnce instasnce)
+    {
+        InstanceReloadCount++;
+    }
+
+    /// <summary>
+    /// 最近一次提交的配置项
+    /// </summary>
+    public Dictionary<string, ConfigMap>? LastUpdate { get; private set; }
+
+    public Dictionary<string, ConfigMap> ConfigMap()
+    {
+        return new()
+        {
+            ["Log"] = new ConfigBoolMap { Key = "Log", Value = false, Default = false }
+        };
+    }
+
+    public void UpdateMap(Dictionary<string, ConfigMap> data)
+    {
+        LastUpdate = data;
     }
 
     public bool Enable()
@@ -41,22 +78,69 @@ internal sealed class FakeProxy : IBaseProxy
 internal sealed class FakeInstance : IProxyInstasnce
 {
     public int EnableCount { get; private set; }
+    public int DisableCount { get; private set; }
+    public int ReloadCount { get; private set; }
+    public int HookCount { get; private set; }
 
     public void Init(string path, Guid uuid)
     {
     }
 
-    public Task<bool> Load() => Task.FromResult(true);
+    public bool Load() => true;
 
-    public Task<bool> Enable()
+    public void Reload()
     {
-        EnableCount++;
-        return Task.FromResult(true);
+        ReloadCount++;
     }
 
-    public Task<bool> Disable() => Task.FromResult(true);
+    public bool Enable()
+    {
+        EnableCount++;
+        return true;
+    }
+
+    public bool Disable()
+    {
+        DisableCount++;
+        return true;
+    }
+
+    public void RegisterEventHook()
+    {
+        HookCount++;
+    }
+
+    public bool Unload() => true;
 
     public void Tick()
     {
+    }
+
+    /// <summary>
+    /// 实例名称，作为可配置项用来测接口
+    /// </summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// 最近一次提交的配置项
+    /// </summary>
+    public Dictionary<string, ConfigMap>? LastUpdate { get; private set; }
+
+    public Dictionary<string, ConfigMap> ConfigMap()
+    {
+        return new()
+        {
+            ["Name"] = new ConfigStringMap { Key = "Name", Value = Name, Default = "fake" }
+        };
+    }
+
+    public void UpdateMap(Dictionary<string, ConfigMap> data)
+    {
+        LastUpdate = data;
+
+        if (data.TryGetValue("Name", out var item) && item is ConfigStringMap map)
+        {
+            Name = map.Value ?? "";
+        }
     }
 }

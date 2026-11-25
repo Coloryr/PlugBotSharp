@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Crypto;
+using PlugBotSharp.Core.Messages;
 
 namespace PlugBotSharp.QQProxy;
 
@@ -22,18 +24,26 @@ internal static class CallbackHandler
     private const int OpValidation = 13;
 
     /// <summary>
+    /// 事件推送
+    /// </summary>
+    private const int OpDispatch = 0;
+
+    /// <summary>
     /// 处理平台回调
     /// </summary>
     /// <param name="ctx">http 上下文</param>
-    /// <param name="botSecret">机器人密钥</param>
-    public static async Task HandleAsync(HttpContext ctx, string botSecret)
+    /// <param name="instance">所属实例</param>
+    public static async Task HandleAsync(HttpContext ctx, ProxyInstance instance)
     {
         // 回调签名基于原始请求体，Body 只能读一次
         using var ms = new MemoryStream();
         await ctx.Request.Body.CopyToAsync(ms, ctx.RequestAborted);
         var body = Encoding.UTF8.GetString(ms.ToArray());
 
-        ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.Callback, body));
+        if (ProxyMain.LogPayload)
+        {
+            ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.Callback, body));
+        }
 
         BaseMessageObj? obj;
         try
@@ -55,13 +65,56 @@ internal static class CallbackHandler
 
         if (obj.OpCode == OpValidation)
         {
-            await HandleValidationAsync(ctx, botSecret, obj);
+            await HandleValidationAsync(ctx, instance.BotSecret, obj);
             return;
         }
 
-        // 事件推送，返回 op 12 告诉平台已经收到
-        ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.CallbackEvent, obj.Type));
+        // 先把 op 12 回掉，插件跑得慢也不能让平台超时重推
         await WriteAsync(ctx, Ack);
+
+        if (obj.OpCode == OpDispatch)
+        {
+            StartDispatch(instance, obj);
+        }
+    }
+
+    /// <summary>
+    /// 后台跑事件处理，避免占用 webhook 响应
+    /// </summary>
+    private static void StartDispatch(ProxyInstance instance, BaseMessageObj envelope)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await DispatchAsync(instance, envelope);
+            }
+            catch (Exception e)
+            {
+                ProxyInstance.Logger.Error(e, ProxyLang.GetLang(ProxyLangKey.SendError, envelope.Type));
+            }
+        });
+    }
+
+    /// <summary>
+    /// 事件推送：转成通用消息事件交给插件，再把回复发回去
+    /// </summary>
+    private static async Task DispatchAsync(ProxyInstance instance, BaseMessageObj envelope)
+    {
+        var message = QQEventParser.Parse(instance.ProxyId, instance.Uuid, envelope);
+
+        if (message is null)
+        {
+            ProxyInstance.Logger.Debug(ProxyLang.GetLang(ProxyLangKey.CallbackEvent, envelope.Type));
+            return;
+        }
+
+        var replies = EventManager.HandleMessage(message);
+
+        foreach (var reply in replies)
+        {
+            await instance.SendAsync(message, reply);
+        }
     }
 
     /// <summary>

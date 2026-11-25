@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Http;
 
 namespace PlugBotSharp.Core.Proxy;
@@ -153,10 +154,34 @@ internal class ProxyAssembly : BaseAssembly
     }
 
     /// <summary>
-    /// 配置实例
+    /// 重载组件配置
     /// </summary>
-    public void ConfigInstance(IProxyInstasnce instance)
+    public void Reload()
     {
-        Proxy.ConfigInstance(instance);
+        Proxy.Reload();
+    }
+
+    /// <summary>
+    /// 重载实例配置
+    /// </summary>
+    public void Reload(IProxyInstasnce instance)
+    {
+        Proxy.Reload(instance);
+    }
+
+    /// <summary>
+    /// 读取组件配置项，交给网页端渲染
+    /// </summary>
+    public Dictionary<string, ConfigMap> ConfigMap()
+    {
+        return Proxy.ConfigMap();
+    }
+
+    /// <summary>
+    /// 保存网页端提交的配置项
+    /// </summary>
+    public void UpdateMap(Dictionary<string, ConfigMap> data)
+    {
+        Proxy.UpdateMap(data);
     }
 }

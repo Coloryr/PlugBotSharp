@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -164,19 +164,19 @@ internal sealed class CoreHttpServer
     /// <summary>
     /// 组件/实例注册的接口，路径 /api/{**path}
     /// </summary>
-    private static Task Api(HttpContext ctx)
+    private static async Task Api(HttpContext ctx)
     {
         var path = (ctx.Request.Path.Value ?? "").TrimStart('/');
 
         if (path.Length == 0 || !ApiRegistry.TryGet(path, out var call))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-            return Task.CompletedTask;
+            return;
         }
 
         try
         {
-            call!(ctx);
+            await call!(ctx);
         }
         catch (Exception e)
         {
@@ -188,8 +188,6 @@ internal sealed class CoreHttpServer
                 ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
             }
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>

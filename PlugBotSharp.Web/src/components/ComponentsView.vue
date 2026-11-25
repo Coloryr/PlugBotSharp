@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { notify } from '../toast'
+import ConfigDialog from './ConfigDialog.vue'
 import InstallDialog from './InstallDialog.vue'
 
 const items = ref([])
@@ -11,6 +12,7 @@ const filter = ref('all')
 const keyword = ref('')
 const busy = ref('')
 const installing = ref(false)
+const configTarget = ref(null)
 
 const typeName = { Plugin: '插件', Proxy: '代理', Lib: '运行库' }
 const stateName = { enabled: '运行中', disabled: '已禁用', loaded: '已加载', unloaded: '未加载', blocked: '依赖缺失' }
@@ -178,6 +180,24 @@ onBeforeUnmount(() => {
               <button class="btn" :disabled="!!busy" @click="act(item, 'unload', '卸载')">卸载</button>
             </template>
 
+            <button
+              v-if="item.type !== 'Lib' && item.loaded"
+              class="btn"
+              :disabled="!!busy"
+              @click="configTarget = item"
+            >
+              设置
+            </button>
+
+            <button
+              v-if="item.type !== 'Lib' && item.loaded"
+              class="btn"
+              :disabled="!!busy"
+              @click="act(item, 'reload', '重载')"
+            >
+              重载
+            </button>
+
             <button class="btn danger" :disabled="!!busy" @click="remove(item)">删除</button>
           </td>
         </tr>
@@ -185,5 +205,16 @@ onBeforeUnmount(() => {
     </table>
 
     <InstallDialog :open="installing" @close="installing = false" @installed="refresh" />
+
+    <ConfigDialog
+      :open="!!configTarget"
+      title="组件设置"
+      :sub="configTarget ? `${configTarget.name || configTarget.id}（${configTarget.id}）` : ''"
+      note="保存后自动重载组件配置"
+      :path="configTarget ? `admin/components/${encodeURIComponent(configTarget.id)}/config` : ''"
+      :reload-path="configTarget ? `admin/components/${encodeURIComponent(configTarget.id)}/reload` : ''"
+      @close="configTarget = null"
+      @done="refresh"
+    />
   </section>
 </template>

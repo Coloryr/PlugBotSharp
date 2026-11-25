@@ -1,4 +1,4 @@
-﻿using NLog;
+using NLog;
 using PlugBotSharp.Core;
 
 namespace PlugBotSharp.Tests;
@@ -24,6 +24,8 @@ public abstract class ComponentTestBase : IDisposable
     public void Dispose()
     {
         ComponentManager.UnloadAll();
+
+        EventManager.Clear();
 
         ComponentManager.Plugins.Clear();
         ComponentManager.Proxys.Clear();

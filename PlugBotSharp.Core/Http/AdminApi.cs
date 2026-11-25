@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization.Metadata;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core.Configs;
@@ -27,10 +27,16 @@ internal static class AdminApi
         group.MapPost("/components/{id}/enable", Enable);
         group.MapPost("/components/{id}/disable", Disable);
         group.MapDelete("/components/{id}", Delete);
+        group.MapPost("/components/{id}/reload", Reload);
+        group.MapGet("/components/{id}/config", ComponentConfig);
+        group.MapPost("/components/{id}/config", (Delegate)SaveComponentConfig);
 
         group.MapGet("/instances", Instances);
         group.MapPost("/instances", (Delegate)CreateInstance);
         group.MapPost("/instances/{uuid}/load", LoadInstance);
+        group.MapPost("/instances/{uuid}/reload", ReloadInstance);
+        group.MapGet("/instances/{uuid}/config", InstanceConfig);
+        group.MapPost("/instances/{uuid}/config", (Delegate)SaveInstanceConfig);
         group.MapPost("/instances/{uuid}/enable", EnableInstance);
         group.MapPost("/instances/{uuid}/disable", DisableInstance);
         group.MapDelete("/instances/{uuid}", DeleteInstance);
@@ -240,6 +246,62 @@ internal static class AdminApi
     }
 
     /// <summary>
+    /// 重载组件配置：Disable → Reload → Enable
+    /// </summary>
+    private static IResult Reload(string id)
+    {
+        if (!ComponentManager.ReloadComponent(id))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.ComponentReloadFail, id));
+        }
+
+        return Ok(new { id }, BotLang.GetLang(BotLangKey.ComponentReloaded, id));
+    }
+
+    /// <summary>
+    /// 读取组件配置项，面板按 type 生成表单
+    /// </summary>
+    private static IResult ComponentConfig(string id)
+    {
+        if (!ComponentManager.IsLoaded(id))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.ComponentNotFound, id));
+        }
+
+        if (!ComponentManager.TryGetConfigMap(id, out var map))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.ComponentConfigNotSupported, id));
+        }
+
+        return Ok(map);
+    }
+
+    /// <summary>
+    /// 保存组件配置项
+    /// </summary>
+    private static async Task<IResult> SaveComponentConfig(HttpContext ctx, string id)
+    {
+        if (!ComponentManager.IsLoaded(id))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.ComponentNotFound, id));
+        }
+
+        var map = await ReadJson(ctx, ConfigMapContext.Default.DictionaryStringConfigMap);
+
+        if (map is null || map.Count == 0)
+        {
+            return Fail("请求体无效");
+        }
+
+        if (!ComponentManager.TryUpdateConfigMap(id, map))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.ComponentConfigNotSupported, id));
+        }
+
+        return Ok(new { id }, BotLang.GetLang(BotLangKey.ComponentConfigSaved, id));
+    }
+
+    /// <summary>
     /// 实例列表
     /// </summary>
     private static IResult Instances()
@@ -334,6 +396,67 @@ internal static class AdminApi
         }
 
         return Ok(new { uuid }, BotLang.GetLang(BotLangKey.InstanceStateChanged, uuid, false));
+    }
+
+    /// <summary>
+    /// 重载实例配置：Disable 实例 → 组件 Reload 实例 → Reload 实例 → Enable 实例
+    /// </summary>
+    private static IResult ReloadInstance(string uuid)
+    {
+        if (!TryParseUuid(uuid, out var id))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.InstanceNotFound, uuid));
+        }
+
+        if (!InstanceManager.TryReload(id, out var error))
+        {
+            return Fail(error);
+        }
+
+        return Ok(new { uuid }, BotLang.GetLang(BotLangKey.InstanceReloaded, uuid));
+    }
+
+    /// <summary>
+    /// 读取实例配置项
+    /// </summary>
+    private static IResult InstanceConfig(string uuid)
+    {
+        if (!TryParseUuid(uuid, out var id))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.InstanceNotFound, uuid));
+        }
+
+        if (!InstanceManager.TryGetConfigMap(id, out var map))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.InstanceConfigNotSupported, uuid));
+        }
+
+        return Ok(map);
+    }
+
+    /// <summary>
+    /// 保存实例配置项
+    /// </summary>
+    private static async Task<IResult> SaveInstanceConfig(HttpContext ctx, string uuid)
+    {
+        if (!TryParseUuid(uuid, out var id))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.InstanceNotFound, uuid));
+        }
+
+        var map = await ReadJson(ctx, ConfigMapContext.Default.DictionaryStringConfigMap);
+
+        if (map is null || map.Count == 0)
+        {
+            return Fail("请求体无效");
+        }
+
+        if (!InstanceManager.TryUpdateConfigMap(id, map))
+        {
+            return Fail(BotLang.GetLang(BotLangKey.InstanceConfigNotSupported, uuid));
+        }
+
+        return Ok(new { uuid }, BotLang.GetLang(BotLangKey.InstanceConfigSaved, uuid));
     }
 
     /// <summary>

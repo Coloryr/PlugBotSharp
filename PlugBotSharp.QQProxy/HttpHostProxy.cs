@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using PlugBotSharp.Core.Messages;
+using PlugBotSharp.QQLib;
 
 namespace PlugBotSharp.QQProxy;
 
@@ -20,17 +22,34 @@ public class HttpHostProxy : IProxy
     private const string CallbackPath = "/";
 
     /// <summary>
-    /// 机器人密钥，用于回调地址验证签名
+    /// 所属实例
     /// </summary>
-    private readonly string _botSecret;
+    private readonly ProxyInstance _instance;
+
+    /// <summary>
+    /// 访问凭证
+    /// </summary>
+    private string? _token;
 
     /// <summary>
     /// 创建使用独立 http 服务器的代理
     /// </summary>
-    /// <param name="botSecret">机器人密钥</param>
-    public HttpHostProxy(string botSecret)
+    /// <param name="instance">所属实例</param>
+    public HttpHostProxy(ProxyInstance instance)
     {
-        _botSecret = botSecret ?? string.Empty;
+        _instance = instance;
+    }
+
+    /// <inheritdoc/>
+    public void SetToken(string? token)
+    {
+        _token = token;
+    }
+
+    /// <inheritdoc/>
+    public Task<SendGroupMessageResObj?> Send(string target, MessageScene scene, BaseMessage message, string? replyId, int sequence)
+    {
+        return QQApi.Send(_token ?? "", target, scene, message, replyId, sequence);
     }
 
     /// <summary>
@@ -63,9 +82,7 @@ public class HttpHostProxy : IProxy
         ProxyInstance.Logger.Info(ProxyLang.GetLang(ProxyLangKey.HttpListening, port, CallbackPath));
     }
 
-    /// <summary>
-    /// 停止 http 服务器
-    /// </summary>
+    /// <inheritdoc/>
     public void Stop()
     {
         var app = Interlocked.Exchange(ref _app, null);
@@ -96,6 +113,6 @@ public class HttpHostProxy : IProxy
     /// </summary>
     private Task HandleCallback(HttpContext ctx)
     {
-        return CallbackHandler.HandleAsync(ctx, _botSecret);
+        return CallbackHandler.HandleAsync(ctx, _instance);
     }
 }

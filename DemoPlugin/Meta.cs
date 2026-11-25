@@ -1,4 +1,4 @@
-﻿using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Core.Configs;
 
 public static class Meta
 {
@@ -19,6 +19,12 @@ public static class Meta
             {
                 Type = DepType.Component,
                 Id = "core",
+                Version = ">=1.0.0"
+            },
+            new DepInfoObj
+            {
+                Type = DepType.Component,
+                Id = "qqlib",
                 Version = ">=1.0.0"
             },
             new DepInfoObj

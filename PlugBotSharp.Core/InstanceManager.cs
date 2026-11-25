@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Proxy;
@@ -111,6 +111,56 @@ internal static class InstanceManager
         proxyId = "";
         uuid = "";
         return false;
+    }
+
+    /// <summary>
+    /// 读取实例的配置项，交给网页端渲染
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <param name="map">配置项</param>
+    /// <returns>实例不存在或者不支持配置时返回 false</returns>
+    internal static bool TryGetConfigMap(Guid uuid, out Dictionary<string, ConfigMap> map)
+    {
+        map = [];
+
+        if (!s_instances.TryGetValue(uuid, out var entry))
+        {
+            return false;
+        }
+
+        try
+        {
+            map = entry.Instance.ConfigMap();
+            return true;
+        }
+        catch (Exception e)
+        {
+            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.InstanceActionFail, uuid));
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 保存网页端提交的实例配置项
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <param name="map">配置项</param>
+    /// <returns>实例不存在或者保存失败时返回 false</returns>
+    internal static bool TryUpdateConfigMap(Guid uuid, Dictionary<string, ConfigMap> map)
+    {
+        if (!s_instances.TryGetValue(uuid, out var entry))
+        {
+            return false;
+        }
+
+        lock (s_lock)
+        {
+            return Call(uuid.ToString(), () =>
+            {
+                entry.Instance.UpdateMap(map);
+                return true;
+            });
+        }
     }
 
     /// <summary>
@@ -284,7 +334,7 @@ internal static class InstanceManager
                 return true;
             }
 
-            if (!Call(uuid.ToString(), () => entry.Instance.Disable().GetAwaiter().GetResult()))
+            if (!Call(uuid.ToString(), () => entry.Instance.Disable()))
             {
                 error = BotLang.GetLang(BotLangKey.InstanceStopFail, uuid);
                 return false;
@@ -292,6 +342,73 @@ internal static class InstanceManager
 
             entry.Enabled = false;
             StateManager.SetInstanceEnabled(uuid.ToString(), false);
+
+            RaiseProxyEvent(entry, ProxyEventType.Stopped);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 重载实例配置：Disable 实例 → 组件 Reload 实例 → Reload 实例 → Enable 实例
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <param name="error">失败原因</param>
+    internal static bool TryReload(Guid uuid, out string error)
+    {
+        error = "";
+
+        if (!s_instances.TryGetValue(uuid, out var entry))
+        {
+            error = BotLang.GetLang(BotLangKey.InstanceNotFound, uuid);
+            return false;
+        }
+
+        lock (s_lock)
+        {
+            var enabled = entry.Enabled;
+
+            if (enabled)
+            {
+                if (!Call(uuid.ToString(), () => entry.Instance.Disable()))
+                {
+                    error = BotLang.GetLang(BotLangKey.InstanceStopFail, uuid);
+                    return false;
+                }
+
+                entry.Enabled = false;
+                RaiseProxyEvent(entry, ProxyEventType.Stopped);
+            }
+
+            // 组件把新配置推给实例
+            if (ComponentManager.Proxys.TryGetValue(entry.ProxyId, out var proxy))
+            {
+                try
+                {
+                    proxy.Reload(entry.Instance);
+                }
+                catch (Exception e)
+                {
+                    BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.ComponentActionFail, entry.ProxyId));
+                }
+            }
+
+            // 实例自己重新读配置
+            if (!Call(uuid.ToString(), () =>
+            {
+                entry.Instance.Reload();
+                return true;
+            }))
+            {
+                error = BotLang.GetLang(BotLangKey.InstanceLoadFail, uuid);
+                return false;
+            }
+
+            if (enabled && !EnableInstance(entry))
+            {
+                error = BotLang.GetLang(BotLangKey.InstanceEnableFail, uuid);
+                return false;
+            }
         }
 
         return true;
@@ -323,7 +440,7 @@ internal static class InstanceManager
                 {
                     if (entry.Enabled)
                     {
-                        entry.Instance.Disable().GetAwaiter().GetResult();
+                        entry.Instance.Disable();
                     }
                 }
                 catch (Exception e)
@@ -331,7 +448,13 @@ internal static class InstanceManager
                     BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.InstanceStopFail, uuid));
                 }
 
+                if (entry.Enabled)
+                {
+                    RaiseProxyEvent(entry, ProxyEventType.Stopped);
+                }
+
                 ApiRegistry.Unregister(entry.Instance);
+                EventManager.Unregister(entry.Instance);
             }
 
             StateManager.RemoveInstanceState(uuid.ToString());
@@ -430,7 +553,7 @@ internal static class InstanceManager
         try
         {
             instance = proxy.CreateInstance();
-            proxy.ConfigInstance(instance);
+            proxy.Reload(instance);
 
             // 实例配置和 Instance.json 都放在 Instances/{实例uuid}
             instance.Init(folder, uuid);
@@ -441,10 +564,19 @@ internal static class InstanceManager
             return false;
         }
 
-        if (!Call(uuid.ToString(), () => instance.Load().GetAwaiter().GetResult()))
+        if (!Call(uuid.ToString(), () => instance.Load()))
         {
             BotManager.Logger.Error(BotLang.GetLang(BotLangKey.InstanceLoadFail, folder));
             return false;
+        }
+
+        try
+        {
+            instance.RegisterEventHook();
+        }
+        catch (Exception e)
+        {
+            BotManager.Logger.Error(e, BotLang.GetLang(BotLangKey.InstanceActionFail, uuid));
         }
 
         s_instances[uuid] = new InstanceEntry
@@ -488,7 +620,7 @@ internal static class InstanceManager
             return true;
         }
 
-        if (!Call(entry.Uuid.ToString(), () => entry.Instance.Enable().GetAwaiter().GetResult()))
+        if (!Call(entry.Uuid.ToString(), () => entry.Instance.Enable()))
         {
             BotManager.Logger.Error(BotLang.GetLang(BotLangKey.InstanceEnableFail, entry.Uuid));
             return false;
@@ -496,6 +628,8 @@ internal static class InstanceManager
 
         entry.Enabled = true;
         StateManager.SetInstanceEnabled(entry.Uuid.ToString(), true);
+
+        RaiseProxyEvent(entry, ProxyEventType.Started);
 
         return true;
     }
@@ -518,7 +652,7 @@ internal static class InstanceManager
                 {
                     if (entry.Enabled)
                     {
-                        entry.Instance.Disable().GetAwaiter().GetResult();
+                        entry.Instance.Disable();
                     }
                 }
                 catch (Exception e)
@@ -526,7 +660,13 @@ internal static class InstanceManager
                     BotManager.Logger.Error(e, BotLang.GetLang(BotLangKey.InstanceStopFail, entry.Uuid));
                 }
 
+                if (entry.Enabled)
+                {
+                    RaiseProxyEvent(entry, ProxyEventType.Stopped);
+                }
+
                 ApiRegistry.Unregister(entry.Instance);
+                EventManager.Unregister(entry.Instance);
                 entry.Enabled = false;
             }
 
@@ -556,7 +696,7 @@ internal static class InstanceManager
                 {
                     if (entry.Enabled)
                     {
-                        entry.Instance.Disable().GetAwaiter().GetResult();
+                        entry.Instance.Disable();
                     }
                 }
                 catch (Exception e)
@@ -564,10 +704,31 @@ internal static class InstanceManager
                     BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.InstanceStopFail, entry.Uuid));
                 }
 
+                if (entry.Enabled)
+                {
+                    RaiseProxyEvent(entry, ProxyEventType.Stopped);
+                }
+
                 ApiRegistry.Unregister(entry.Instance);
+                EventManager.Unregister(entry.Instance);
                 s_instances.TryRemove(entry.Uuid, out _);
             }
         }
+    }
+
+    /// <summary>
+    /// 广播实例的 Proxy 事件
+    /// </summary>
+    /// <param name="entry">实例记录</param>
+    /// <param name="type">事件类型</param>
+    private static void RaiseProxyEvent(InstanceEntry entry, ProxyEventType type)
+    {
+        EventManager.HandleProxy(new ProxyEvent
+        {
+            Id = entry.ProxyId,
+            Uuid = entry.Uuid,
+            Type = type
+        });
     }
 
     /// <summary>

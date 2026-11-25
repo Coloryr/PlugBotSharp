@@ -1,4 +1,4 @@
-﻿namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core;
 
 public enum Lang
 {
@@ -87,6 +87,16 @@ internal enum BotLangKey
     InstanceNotFound,
     InstanceProxyNotReady,
     ComponentActionFail,
+    ComponentConfigNotSupported,
+    ComponentConfigSaved,
+    ComponentReloaded,
+    ComponentReloadFail,
+    InstanceConfigNotSupported,
+    InstanceConfigSaved,
+    InstanceReloaded,
+    EventMessageFail,
+    EventProxyFail,
+    EventPluginFail,
     InstanceActionFail,
     InstanceLoadSuccess,
 
@@ -303,6 +313,26 @@ internal static class BotLang
                 return "代理 {0} 未启用，无法创建实例";
             case BotLangKey.ComponentActionFail:
                 return "组件 {0} 执行异常";
+            case BotLangKey.ComponentConfigNotSupported:
+                return "组件 {0} 没有提供配置项";
+            case BotLangKey.ComponentConfigSaved:
+                return "组件 {0} 的配置已保存";
+            case BotLangKey.ComponentReloaded:
+                return "组件 {0} 的配置已重载";
+            case BotLangKey.ComponentReloadFail:
+                return "组件 {0} 重载配置失败";
+            case BotLangKey.InstanceConfigNotSupported:
+                return "实例 {0} 没有提供配置项";
+            case BotLangKey.InstanceConfigSaved:
+                return "实例 {0} 的配置已保存";
+            case BotLangKey.InstanceReloaded:
+                return "实例 {0} 的配置已重载";
+            case BotLangKey.EventMessageFail:
+                return "处理消息事件异常 {0}";
+            case BotLangKey.EventProxyFail:
+                return "处理 Proxy 事件异常 {0}";
+            case BotLangKey.EventPluginFail:
+                return "处理插件事件异常 {0}";
             case BotLangKey.InstanceActionFail:
                 return "实例 {0} 执行异常";
             case BotLangKey.InstanceLoadSuccess:
@@ -552,6 +582,26 @@ internal static class BotLang
                 return "Proxy {0} is not enabled, cannot create instance";
             case BotLangKey.ComponentActionFail:
                 return "Component {0} threw an exception";
+            case BotLangKey.ComponentConfigNotSupported:
+                return "Component {0} has no config";
+            case BotLangKey.ComponentConfigSaved:
+                return "Config of {0} saved";
+            case BotLangKey.ComponentReloaded:
+                return "Config of {0} reloaded";
+            case BotLangKey.ComponentReloadFail:
+                return "Reload of {0} failed";
+            case BotLangKey.InstanceConfigNotSupported:
+                return "Instance {0} has no config";
+            case BotLangKey.InstanceConfigSaved:
+                return "Config of {0} saved";
+            case BotLangKey.InstanceReloaded:
+                return "Config of {0} reloaded";
+            case BotLangKey.EventMessageFail:
+                return "Message event failed {0}";
+            case BotLangKey.EventProxyFail:
+                return "Proxy event failed {0}";
+            case BotLangKey.EventPluginFail:
+                return "Plugin event failed {0}";
             case BotLangKey.InstanceActionFail:
                 return "Instance {0} threw an exception";
             case BotLangKey.InstanceLoadSuccess:

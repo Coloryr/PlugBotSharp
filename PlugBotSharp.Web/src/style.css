@@ -618,9 +618,137 @@ select:disabled {
   font-size: 12px;
 }
 
+
+/* 组件 / 实例设置 */
+.dialog.wide { width: min(660px, 100%); }
+
+.cfg {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 56vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.cfg-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cfg-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cfg-head .key {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cfg-head .btn {
+  margin-left: auto;
+}
+
+.cfg-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cfg textarea {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  resize: vertical;
+  min-height: 72px;
+}
+
+.cfg textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(47, 111, 235, .12);
+}
+
+.btn.sm {
+  padding: 3px 9px;
+  font-size: 11px;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.switch .track {
+  width: 38px;
+  height: 22px;
+  padding: 2px;
+  border-radius: 999px;
+  background: #d0d7de;
+  display: inline-flex;
+  align-items: center;
+  transition: background .15s;
+}
+
+.switch .thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(31, 35, 40, .3);
+  transition: transform .15s;
+}
+
+.switch input:checked + .track {
+  background: var(--ok);
+}
+
+.switch input:checked + .track .thumb {
+  transform: translateX(16px);
+}
+
+.switch-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.kv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.kv-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.kv-row input {
+  flex: 1;
+}
+
 .dialog-sub {
   margin: -6px 0 12px;
   color: var(--muted);
   font-size: 12px;
 }
-
