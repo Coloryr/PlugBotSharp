@@ -98,6 +98,26 @@ public class ConfigMapTests
     }
 
     [Fact]
+    public void Description_and_placeholder_round_trip()
+    {
+        var map = new Dictionary<string, ConfigMap>
+        {
+            ["Log"] = new ConfigBoolMap
+            {
+                Key = "Log",
+                Description = "调试日志开关",
+                Placeholder = "开 / 关"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(map, ConfigMapContext.Default.DictionaryStringConfigMap);
+        var back = JsonSerializer.Deserialize(json, ConfigMapContext.Default.DictionaryStringConfigMap)!;
+
+        Assert.Equal("调试日志开关", back["Log"].Description);
+        Assert.Equal("开 / 关", back["Log"].Placeholder);
+    }
+
+    [Fact]
     public void Deserialize_defaults_missing_collections()
     {
         var json = """[{"type":"list","key":"x"},{"type":"kv","key":"y"}]""";

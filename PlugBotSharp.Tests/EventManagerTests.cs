@@ -86,6 +86,74 @@ public class EventManagerTests : ComponentTestBase
     }
 
     [Fact]
+    public async Task Send_hook_receives_the_message()
+    {
+        var owner = new object();
+        ProxyMessage? received = null;
+        BaseMessage? body = null;
+
+        try
+        {
+            EventManager.RegisterSendHook(owner, (ctx, msg) =>
+            {
+                received = ctx;
+                body = msg;
+
+                return Task.CompletedTask;
+            });
+
+            var context = new ProxyMessage
+            {
+                Id = "qq",
+                Uuid = Guid.NewGuid(),
+                SenderType = MessageSenderType.Group,
+                Sender = "user",
+                Target = "group",
+                Message = new TextMessage("x")
+            };
+
+            await EventManager.HandleSendAsync(context, new TextMessage("hi"));
+
+            Assert.Same(context, received);
+            Assert.Equal("hi", Assert.IsType<TextMessage>(body).Text);
+        }
+        finally
+        {
+            EventManager.Unregister(owner);
+        }
+    }
+
+    [Fact]
+    public async Task Send_hook_is_removed_with_the_owner()
+    {
+        var owner = new object();
+        var count = 0;
+
+        EventManager.RegisterSendHook(owner, (_, _) =>
+        {
+            count++;
+            return Task.CompletedTask;
+        });
+
+        var context = new ProxyMessage
+        {
+            Id = "qq",
+            Uuid = Guid.Empty,
+            SenderType = MessageSenderType.User,
+            Sender = "user",
+            Message = new TextMessage("x")
+        };
+
+        await EventManager.HandleSendAsync(context, new TextMessage("hi"));
+        Assert.Equal(1, count);
+
+        EventManager.Unregister(owner);
+
+        await EventManager.HandleSendAsync(context, new TextMessage("hi"));
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
     public void Plugin_lifecycle_events_are_raised()
     {
         var owner = new object();

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- 管理面板前端目录 -->
+    <AdminPanelDir>$(MSBuildThisFileDirectory)..\..\PlugBotSharp.Web\</AdminPanelDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="NLog" Version="6.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlugBotSharp.Tests" />
+  </ItemGroup>
+
+  <!-- 编译前构建前端（-p:BuildAdminPanel=false 可跳过） -->
+  <Target Name="BuildAdminPanel" BeforeTargets="PrepareForBuild" Condition="'$(BuildAdminPanel)' != 'false' And '$(DesignTimeBuild)' != 'true' And Exists('$(AdminPanelDir)package.json')">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(AdminPanelDir)" Condition="!Exists('$(AdminPanelDir)node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(AdminPanelDir)" />
+  </Target>
+
+  <!-- 把 dist 以 wwwroot/ 前缀嵌进 dll，供 EmbeddedAssets 读取 -->
+  <Target Name="EmbedAdminPanel" DependsOnTargets="BuildAdminPanel" BeforeTargets="PrepareForBuild">
+    <ItemGroup>
+      <_PanelFile Include="$(AdminPanelDir)dist\**\*" />
+    </ItemGroup>
+    <ItemGroup>
+      <EmbeddedResource Include="@(_PanelFile)"
+                        LogicalName="wwwroot/%(_PanelFile.RecursiveDir)%(_PanelFile.Filename)%(_PanelFile.Extension)"
+                        Type="Non-Resx"
+                        WithCulture="false" />
+    </ItemGroup>
+  </Target>
+
+</Project>

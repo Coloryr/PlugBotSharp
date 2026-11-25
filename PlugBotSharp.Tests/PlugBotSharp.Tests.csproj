@@ -19,10 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PlugBotSharp.Core\PlugBotSharp.Core.csproj" />
-    <ProjectReference Include="..\PlugBotSharp.QQProxy\PlugBotSharp.QQProxy.csproj" />
-    <ProjectReference Include="..\DemoPlugin\DemoPlugin.csproj" />
-    <ProjectReference Include="..\PlugBotSharp.OneBotProxy\PlugBotSharp.OneBotProxy.csproj" />
+    <ProjectReference Include="..\Core\PlugBotSharp.Core\PlugBotSharp.Core.csproj" />
+    <ProjectReference Include="..\Proxy\PlugBotSharp.QQProxy\PlugBotSharp.QQProxy.csproj" />
+    <ProjectReference Include="..\Plugin\DemoPlugin\DemoPlugin.csproj" />
+    <ProjectReference Include="..\Proxy\PlugBotSharp.OneBotProxy\PlugBotSharp.OneBotProxy.csproj" />
+    <ProjectReference Include="..\Proxy\PlugBotSharp.GenshinProxy\PlugBotSharp.GenshinProxy.csproj" />
   </ItemGroup>
 
 </Project>

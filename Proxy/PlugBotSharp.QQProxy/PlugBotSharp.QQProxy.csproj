@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlugBotSharp.Core\PlugBotSharp.Core.csproj" />
+    <ProjectReference Include="..\..\Lib\PlugBotSharp.QQLib\PlugBotSharp.QQLib.csproj" />
+    <ProjectReference Include="..\..\build\MetaGen\MetaGen.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlugBotSharp.Tests" />
+  </ItemGroup>
+
+  <Import Project="..\..\build\ComponentPackage.targets" />
+
+</Project>

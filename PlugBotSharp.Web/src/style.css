@@ -658,6 +658,13 @@ select:disabled {
   color: var(--muted);
 }
 
+.cfg-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  opacity: .75;
+}
+
 .cfg textarea {
   border: 1px solid var(--border);
   border-radius: 8px;

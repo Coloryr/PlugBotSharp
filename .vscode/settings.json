@@ -1,1 +1,3 @@
-{}
+{
+    "dotnet.defaultSolution": "PlugBotSharp.slnx"
+}

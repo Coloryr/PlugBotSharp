@@ -158,6 +158,14 @@ function reset(item) {
   }
 }
 
+/**
+ * 下拉选项的显示文案，空值表示不启用
+ * @param {string} value 选项值
+ */
+function optionLabel(value) {
+  return value === '' ? '（不使用）' : value
+}
+
 function addRow(item) {
   item.rows.push({ k: '', v: '' })
 }
@@ -263,6 +271,8 @@ function close() {
             <button class="btn ghost sm" :disabled="busy" @click="reset(item)">默认值</button>
           </div>
 
+          <p v-if="item.description" class="cfg-desc">{{ item.description }}</p>
+
           <input
             v-if="item.type === 'int'"
             v-model.number="item.value"
@@ -270,6 +280,7 @@ function close() {
             step="1"
             :min="item.min"
             :max="item.max"
+            :placeholder="item.placeholder || undefined"
           />
           <input
             v-else-if="item.type === 'float'"
@@ -278,6 +289,7 @@ function close() {
             step="0.01"
             :min="item.min"
             :max="item.max"
+            :placeholder="item.placeholder || undefined"
           />
           <label v-else-if="item.type === 'bool'" class="switch">
             <input v-model="item.value" type="checkbox" />
@@ -285,7 +297,7 @@ function close() {
             <span class="switch-text">{{ item.value ? '开启' : '关闭' }}</span>
           </label>
           <select v-else-if="item.type === 'enum'" v-model="item.value">
-            <option v-for="opt in item.options || []" :key="opt" :value="opt">{{ opt }}</option>
+            <option v-for="opt in item.options || []" :key="opt" :value="opt">{{ optionLabel(opt) }}</option>
           </select>
           <input
             v-else-if="item.type === 'string'"
@@ -293,8 +305,14 @@ function close() {
             :type="item.secret ? 'password' : 'text'"
             :maxlength="item.maxLength > 0 ? item.maxLength : undefined"
             :autocomplete="item.secret ? 'new-password' : 'off'"
+            :placeholder="item.placeholder || undefined"
           />
-          <textarea v-else-if="item.type === 'list'" v-model="item.text" rows="4" placeholder="一行一项"></textarea>
+          <textarea
+            v-else-if="item.type === 'list'"
+            v-model="item.text"
+            rows="4"
+            :placeholder="item.placeholder || '一行一项'"
+          ></textarea>
           <div v-else-if="item.type === 'kv'" class="kv">
             <div v-for="(row, index) in item.rows" :key="index" class="kv-row">
               <input v-model="row.k" placeholder="键" />
