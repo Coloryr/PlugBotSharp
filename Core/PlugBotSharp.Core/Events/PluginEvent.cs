@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using PlugBotSharp.Core.Messages;
 
 namespace PlugBotSharp.Core;
@@ -48,9 +47,11 @@ public record PluginEvent
     /// </summary>
     public string Name { get; init; } = "";
     /// <summary>
-    /// 事件数据，JSON 节点：跨 ALC 只传共享类型，不传组件自己的对象
+    /// 事件数据：基础类型（string / bool / 各种整数和小数）或者 JsonNode。
+    /// RaiseHandle 限制了能传的输入，所以订阅方直接 data is string / data is int 判断类型就行；
+    /// 跨 ALC 只传共享类型，不传组件自己的对象
     /// </summary>
-    public JsonNode? Data { get; init; }
+    public object? Data { get; init; }
     /// <summary>
     /// 事件带的消息，和 Data 二选一
     /// </summary>

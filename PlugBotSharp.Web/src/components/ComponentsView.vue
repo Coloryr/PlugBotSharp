@@ -4,6 +4,7 @@ import { api } from '../api'
 import { notify } from '../toast'
 import ConfigDialog from './ConfigDialog.vue'
 import InstallDialog from './InstallDialog.vue'
+import StateChips from './StateChips.vue'
 
 const items = ref([])
 const loading = ref(false)
@@ -152,11 +153,7 @@ onBeforeUnmount(() => {
                 {{ dep.type === 'Nuget' ? 'NuGet' : '组件' }} {{ dep.id }} {{ dep.version }}
               </span>
             </div>
-            <div v-if="item.states && Object.keys(item.states).length" class="deps">
-              <span v-for="(value, name) in item.states" :key="name" class="dep state-dep">
-                {{ name }}: {{ value }}
-              </span>
-            </div>
+            <StateChips :states="item.states" />
           </td>
           <td><span class="tag">{{ typeName[item.type] || item.type }}</span></td>
           <td class="mono">{{ item.version || '-' }}</td>

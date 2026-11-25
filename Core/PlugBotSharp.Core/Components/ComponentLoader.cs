@@ -115,7 +115,7 @@ internal static class ComponentLoader
             MaxDegreeOfParallelism = Math.Max(4, Environment.ProcessorCount),
         }, i =>
         {
-            results[i] = NugetManager.Install(deps[i].Id, deps[i].Version);
+            results[i] = NugetManager.EnsurePackage(deps[i].Id, deps[i].Version);
         });
 
         var failed = new List<string>();
@@ -332,7 +332,7 @@ internal static class ComponentLoader
     {
         foreach (var dep in meta.Deps ?? [])
         {
-            if (dep.Type == DepType.Nuget && !NugetManager.Install(dep.Id, dep.Version))
+            if (dep.Type == DepType.Nuget && !NugetManager.EnsurePackage(dep.Id, dep.Version))
             {
                 return false;
             }
@@ -701,6 +701,7 @@ internal static class ComponentLoader
 
         yield return name;
         yield return name + ".dll";
+        yield return "lib" + name + ".dll";
         yield return name + ".so";
         yield return "lib" + name + ".so";
         yield return name + ".dylib";

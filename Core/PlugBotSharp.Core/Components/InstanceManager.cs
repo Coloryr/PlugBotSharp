@@ -6,17 +6,6 @@ using PlugBotSharp.Core.Proxy;
 namespace PlugBotSharp.Core;
 
 /// <summary>
-/// 实例信息，供管理面板展示
-/// </summary>
-/// <param name="Uuid">实例 uuid</param>
-/// <param name="Proxy">所属代理组件 id</param>
-/// <param name="Name">实例名称</param>
-/// <param name="Folder">实例目录</param>
-/// <param name="Loaded">是否已加载到宿主</param>
-/// <param name="Enabled">是否已启用</param>
-internal sealed record InstanceInfo(Guid Uuid, string Proxy, string Name, string Folder, bool Loaded, bool Enabled);
-
-/// <summary>
 /// 实例管理：创建实例、启用实例、驱动 Tick
 /// </summary>
 internal static class InstanceManager
@@ -354,11 +343,11 @@ internal static class InstanceManager
     /// 取实例上报的自定义状态
     /// </summary>
     /// <param name="uuid">实例 uuid</param>
-    internal static IReadOnlyDictionary<string, string> GetStates(Guid uuid)
+    internal static IReadOnlyDictionary<string, StateView> GetStates(Guid uuid)
     {
         return s_instances.TryGetValue(uuid, out var entry)
             ? StateRegistry.Get(entry.Instance)
-            : new Dictionary<string, string>();
+            : new Dictionary<string, StateView>();
     }
 
     /// <summary>

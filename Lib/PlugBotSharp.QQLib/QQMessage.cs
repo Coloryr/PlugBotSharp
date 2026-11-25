@@ -81,7 +81,7 @@ public static class QQMessage
     /// <summary>
     /// 找内容里的引用消息 id
     /// </summary>
-    private static string? FindReplyId(BaseMessage message)
+    public static string? FindReplyId(BaseMessage message)
     {
         return message switch
         {

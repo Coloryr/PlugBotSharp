@@ -404,7 +404,7 @@ public class EventManagerTests : ComponentTestBase
             Assert.NotNull(received);
             Assert.Equal(PluginEventType.Custom, received!.Type);
             Assert.Equal("ping", received.Name);
-            Assert.Equal(42, received.Data!["value"]!.GetValue<int>());
+            Assert.Equal(42, Assert.IsType<JsonObject>(received.Data)["value"]!.GetValue<int>());
         }
         finally
         {

@@ -1,17 +1,17 @@
-﻿using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Core.Configs;
 
 public static class Meta
 {
     public static MetaObj Info = new()
     {
-        Name = "CorePlugin",
-        Id = "core",
+        Name = "DemoLib",
+        Id = "demolib",
         Version = "1.0.0",
-        Description = "核心库",
+        Description = "示例运行库",
         Type = ComponentType.Lib,
         Dlls =
         [
-            "PlugBotSharp.Core.Lib.dll"
+            "DemoLib.dll"
         ],
         Deps = []
     };

@@ -133,13 +133,32 @@ internal sealed class ComponentRegister : IRegister
     }
 
     /// <inheritdoc/>
-    public StateHandle RegisterState(string name)
+    public StateValueHandle RegisterState(string name, string label = "", string description = "")
     {
         EnsureOpen();
 
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return new StateHandle(_owner, name);
+        var handle = new StateValueHandle(_owner, name, label, description);
+
+        // 先把名字和描述记下来，值还没上报时面板上也能看到
+        StateRegistry.Declare(_owner, name, StateRegistry.ValueKind, handle.Label, handle.Description);
+
+        return handle;
+    }
+
+    /// <inheritdoc/>
+    public StateKvHandle RegisterKvState(string name, string label = "", string description = "")
+    {
+        EnsureOpen();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        var handle = new StateKvHandle(_owner, name, label, description);
+
+        StateRegistry.Declare(_owner, name, StateRegistry.KvKind, handle.Label, handle.Description);
+
+        return handle;
     }
 
     /// <inheritdoc/>

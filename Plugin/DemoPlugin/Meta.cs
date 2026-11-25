@@ -18,7 +18,7 @@ public static class Meta
             new DepInfoObj
             {
                 Type = DepType.Component,
-                Id = "core",
+                Id = "demolib",
                 Version = ">=1.0.0"
             },
             new DepInfoObj

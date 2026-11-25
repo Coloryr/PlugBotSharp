@@ -94,7 +94,14 @@ public class DemoPluginTests : ComponentTestBase
         Send("/text", plugin);
         Send("/text", plugin);
 
-        Assert.Equal("2", StateRegistry.Get(plugin)["replies"]);
+        var states = StateRegistry.Get(plugin);
+
+        Assert.Equal(2, states["replies"].Value);
+
+        // 命令次数是键值状态，按命令名分开记
+        var commands = Assert.IsType<Dictionary<string, object?>>(states["commands"].Value);
+
+        Assert.Equal(2, commands["/text"]);
     }
 
     [Fact]
@@ -108,8 +115,8 @@ public class DemoPluginTests : ComponentTestBase
         var states = StateRegistry.Get(plugin);
 
         // 定向订阅只收 [demo]ping，广播订阅连生命周期事件一起收
-        Assert.Equal("1", states["pings"]);
-        Assert.Equal("1", states["events"]);
+        Assert.Equal(1, states["pings"].Value);
+        Assert.Equal(1, states["events"].Value);
     }
 
     [Fact]

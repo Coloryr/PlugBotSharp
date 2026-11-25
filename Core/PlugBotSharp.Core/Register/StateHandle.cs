@@ -3,37 +3,51 @@ using PlugBotSharp.Core.Http;
 namespace PlugBotSharp.Core;
 
 /// <summary>
-/// 自定义状态的句柄，注册状态时返回，之后随时更新
+/// 状态句柄的公共部分：注册状态时拿到，之后随时更新。
+/// 单值状态用 RegisterState，只读键值状态用 RegisterKvState，两种都在面板上展示，面板侧不能改
 /// </summary>
-public sealed class StateHandle
+public abstract class StateHandle
 {
-    private readonly object _owner;
-
-    internal StateHandle(object owner, string name)
+    /// <summary>
+    /// 创建句柄
+    /// </summary>
+    /// <param name="owner">上报状态的组件对象</param>
+    /// <param name="name">状态名，面板接口里当键用</param>
+    /// <param name="label">面板上显示的名字，空时用状态名</param>
+    /// <param name="description">面板上的解释</param>
+    internal StateHandle(object owner, string name, string label, string description)
     {
-        _owner = owner;
+        Owner = owner;
         Name = name;
+        Label = string.IsNullOrWhiteSpace(label) ? name : label;
+        Description = description ?? "";
     }
 
     /// <summary>
-    /// 状态名，面板上显示成标签
+    /// 状态名，也是面板接口里的键
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// 更新状态值
+    /// 面板上显示的名字，注册时没填就和 <see cref="Name"/> 一样
     /// </summary>
-    /// <param name="value">状态值</param>
-    public void Set(string value)
-    {
-        StateRegistry.Set(_owner, Name, value);
-    }
+    public string Label { get; }
+
+    /// <summary>
+    /// 面板上显示的解释，鼠标停在标签上能看到
+    /// </summary>
+    public string Description { get; }
+
+    /// <summary>
+    /// 上报状态的组件对象
+    /// </summary>
+    internal object Owner { get; }
 
     /// <summary>
     /// 移除这个状态
     /// </summary>
     public void Remove()
     {
-        StateRegistry.Remove(_owner, Name);
+        StateRegistry.Remove(Owner, Name);
     }
 }

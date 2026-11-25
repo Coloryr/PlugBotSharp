@@ -277,6 +277,65 @@ public record MediaInfoObj
     public string FileInfo { get; set; }
 }
 
+/// <summary>
+/// 上传富媒体文件的请求
+/// </summary>
+public record QQFileUploadObj
+{
+    /// <summary>
+    /// 文件类型，1 是图片
+    /// </summary>
+    [JsonPropertyName("file_type")]
+    public int FileType { get; set; } = 1;
+    /// <summary>
+    /// 只上传不直接发送
+    /// </summary>
+    [JsonPropertyName("srv_send_msg")]
+    public bool SrvSendMsg { get; set; }
+    /// <summary>
+    /// 文件内容，base64
+    /// </summary>
+    [JsonPropertyName("file_data")]
+    public string? FileData { get; set; }
+    /// <summary>
+    /// 文件地址，和 file_data 二选一
+    /// </summary>
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+}
+
+/// <summary>
+/// 上传富媒体文件的结果
+/// </summary>
+public record QQFileUploadResObj
+{
+    /// <summary>
+    /// 文件信息，发消息时用
+    /// </summary>
+    [JsonPropertyName("file_info")]
+    public string? FileInfo { get; set; }
+    /// <summary>
+    /// 过期时间
+    /// </summary>
+    [JsonPropertyName("ttl")]
+    public int Ttl { get; set; }
+    /// <summary>
+    /// 文件 id
+    /// </summary>
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+    /// <summary>
+    /// 错误码
+    /// </summary>
+    [JsonPropertyName("code")]
+    public long? Code { get; set; }
+    /// <summary>
+    /// 错误信息
+    /// </summary>
+    [JsonPropertyName("message")]
+    public string? Message { get; set; }
+}
+
 public record MessageReferenceObj
 {
     /// <summary>
@@ -398,6 +457,8 @@ public record SendGroupMessageResObj
 [JsonSerializable(typeof(SendGroupMessageObj))]
 [JsonSerializable(typeof(SendGroupMessageResObj))]
 [JsonSerializable(typeof(QQGroupMessageObj))]
+[JsonSerializable(typeof(QQFileUploadObj))]
+[JsonSerializable(typeof(QQFileUploadResObj))]
 [JsonSerializable(typeof(QQC2CMessageObj))]
 public partial class QQJsonContext : JsonSerializerContext
 {

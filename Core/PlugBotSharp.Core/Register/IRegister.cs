@@ -80,10 +80,22 @@ public interface IRegister
     // ------------------------------------------------------------------ 句柄：注册后随时用
 
     /// <summary>
-    /// 注册一个自定义状态，面板上显示成标签，返回的句柄随时更新
+    /// 注册一个单值状态，面板上显示成 名字: 值，返回的句柄随时更新。
+    /// 值支持文本、开关和各种整数 / 小数等基础类型
     /// </summary>
-    /// <param name="name">状态名</param>
-    StateHandle RegisterState(string name);
+    /// <param name="name">状态名，面板接口里当键用</param>
+    /// <param name="label">面板上显示的名字，不填就用状态名</param>
+    /// <param name="description">面板上的解释，鼠标停在标签上能看到</param>
+    StateValueHandle RegisterState(string name, string label = "", string description = "");
+
+    /// <summary>
+    /// 注册一个只读键值状态，面板上显示成可展开的表格，返回的句柄随时增删键。
+    /// 只读指的是面板侧不能改，插件这边随便写
+    /// </summary>
+    /// <param name="name">状态名，面板接口里当键用</param>
+    /// <param name="label">面板上显示的名字，不填就用状态名</param>
+    /// <param name="description">面板上的解释，鼠标停在标签上能看到</param>
+    StateKvHandle RegisterKvState(string name, string label = "", string description = "");
 
     /// <summary>
     /// 注册代理事件，返回的句柄用来把收到的消息注入进来：所有订阅消息事件的组件都会收到，

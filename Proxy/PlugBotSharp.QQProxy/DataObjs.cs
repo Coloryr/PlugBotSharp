@@ -51,6 +51,17 @@ public record InstanceDataObj
     /// 证书密码
     /// </summary>
     public string CertificatePassword { get; set; } = "";
+
+    /// <summary>
+    /// 被动回复超限时改成主动发送。
+    /// 注意：官方 2025-04-21 起下线了主动推送，开着也只会在失败后被停止
+    /// </summary>
+    public bool ActiveFallback { get; set; }
+
+    /// <summary>
+    /// 同一条消息最多被动回复几次，群主 / 管理员身份的机器人可以到 50
+    /// </summary>
+    public int PassiveLimit { get; set; } = 5;
 }
 
 /// <summary>
@@ -122,6 +133,7 @@ public record ValidationResponseObj
 [JsonSerializable(typeof(BaseMessageObj))]
 [JsonSerializable(typeof(ValidationRequestObj))]
 [JsonSerializable(typeof(ValidationResponseObj))]
+[JsonSerializable(typeof(QuotaFileObj))]
 internal partial class JsonContext : JsonSerializerContext
 {
 

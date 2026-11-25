@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Plugin;
 using PlugBotSharp.Core.Proxy;
@@ -55,6 +56,225 @@ public static class ComponentApi
         return InstanceManager.TryGetInstance(instance, out var proxyId, out var uuid)
             ? ApiRegistry.Unregister($"api/{proxyId}/{uuid}", instance)
             : ApiRegistry.Unregister(instance);
+    }
+
+    // ------------------------------------------------------------------ 组件
+
+    /// <summary>
+    /// 全部组件：已加载的，加上磁盘上还没加载的
+    /// </summary>
+    /// <returns>组件列表，按类型和 id 排序</returns>
+    public static List<ComponentInfo> GetComponents()
+    {
+        return ComponentManager.ListAll().Select(x => new ComponentInfo
+        {
+            Id = x.Meta.Id,
+            Name = x.Meta.Name ?? "",
+            Version = x.Meta.Version ?? "",
+            Type = x.Meta.Type,
+            Description = x.Meta.Description ?? "",
+            Folder = x.Folder,
+            Loaded = x.Assembly is not null,
+            Enabled = x.Assembly?.State == ComponentState.Enabled,
+            Blocked = ComponentManager.IsComponentBlocked(x.Meta.Id),
+            State = ComponentManager.GetState(x.Meta.Id)
+        }).ToList();
+    }
+
+    /// <summary>
+    /// 组件的展示状态
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <returns>enabled / disabled / loaded / unloaded / blocked</returns>
+    public static string GetComponentState(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        return ComponentManager.GetState(id);
+    }
+
+    /// <summary>
+    /// 启动组件：没加载的先加载，然后启用；运行库没有启用这一步，加载完就算启动
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <returns>失败时返回 false，原因记在日志里</returns>
+    public static bool StartComponent(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        var assembly = ComponentManager.Find(id);
+
+        if (assembly is null)
+        {
+            if (!ComponentLoader.LoadComponent(id))
+            {
+                return false;
+            }
+
+            assembly = ComponentManager.Find(id);
+        }
+
+        if (assembly is null)
+        {
+            return false;
+        }
+
+        return assembly.Meta.Type == ComponentType.Lib || ComponentManager.EnableComponent(id);
+    }
+
+    /// <summary>
+    /// 禁用组件：只停用，不卸载；运行库没有启用这一步，返回 false
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <returns>失败时返回 false</returns>
+    public static bool DisableComponent(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        return ComponentManager.DisableComponent(id);
+    }
+
+    /// <summary>
+    /// 重启组件：停用 → 重读配置 → 按原来的启用状态恢复
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <returns>失败时返回 false</returns>
+    public static bool ReloadComponent(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        return ComponentManager.ReloadComponent(id);
+    }
+
+    /// <summary>
+    /// 组件的配置项
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <returns>配置项，组件没提供或者没加载时返回 null</returns>
+    public static Dictionary<string, ConfigMap>? GetComponentConfig(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        return ComponentManager.TryGetConfigMap(id, out var map) ? map : null;
+    }
+
+    /// <summary>
+    /// 更新组件配置，交给组件的 UpdateMap
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    /// <param name="map">新的配置项</param>
+    /// <returns>失败时返回 false</returns>
+    public static bool UpdateComponentConfig(string id, Dictionary<string, ConfigMap> map)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(map);
+
+        return ComponentManager.TryUpdateConfigMap(id, map);
+    }
+
+    // ------------------------------------------------------------------ 实例
+
+    /// <summary>
+    /// 全部实例：已加载的，加上磁盘上还没加载的
+    /// </summary>
+    /// <returns>实例列表，按代理和名称排序</returns>
+    public static List<InstanceInfo> GetInstances()
+    {
+        return InstanceManager.List();
+    }
+
+    /// <summary>
+    /// 启用实例，还没加载的先从磁盘加载
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <returns>失败时返回 false，原因记在日志里</returns>
+    public static bool EnableInstance(Guid uuid)
+    {
+        if (!InstanceManager.TryLoad(uuid, out var error))
+        {
+            BotManager.Logger?.Warn(error);
+
+            return false;
+        }
+
+        // 磁盘上记着启用状态的实例，TryLoad 已经把它启起来了，别再启一遍
+        if (InstanceManager.List().Any(x => x.Uuid == uuid && x.Enabled))
+        {
+            return true;
+        }
+
+        var ok = InstanceManager.TryEnable(uuid, out error);
+
+        if (!ok)
+        {
+            BotManager.Logger?.Warn(error);
+        }
+
+        return ok;
+    }
+
+    /// <summary>
+    /// 禁用实例，只停用，不卸载
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <returns>失败时返回 false，原因记在日志里</returns>
+    public static bool DisableInstance(Guid uuid)
+    {
+        var ok = InstanceManager.TryDisable(uuid, out var error);
+
+        if (!ok)
+        {
+            BotManager.Logger?.Warn(error);
+        }
+
+        return ok;
+    }
+
+    /// <summary>
+    /// 重启实例：停用 → 重读配置 → 按原来的启用状态恢复
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <returns>失败时返回 false，原因记在日志里</returns>
+    public static bool ReloadInstance(Guid uuid)
+    {
+        if (!InstanceManager.TryLoad(uuid, out var error))
+        {
+            BotManager.Logger?.Warn(error);
+
+            return false;
+        }
+
+        var ok = InstanceManager.TryReload(uuid, out error);
+
+        if (!ok)
+        {
+            BotManager.Logger?.Warn(error);
+        }
+
+        return ok;
+    }
+
+    /// <summary>
+    /// 实例的配置项
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <returns>配置项，实例没提供或者没加载时返回 null</returns>
+    public static Dictionary<string, ConfigMap>? GetInstanceConfig(Guid uuid)
+    {
+        return InstanceManager.TryGetConfigMap(uuid, out var map) ? map : null;
+    }
+
+    /// <summary>
+    /// 更新实例配置，交给实例的 UpdateMap
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <param name="map">新的配置项</param>
+    /// <returns>失败时返回 false</returns>
+    public static bool UpdateInstanceConfig(Guid uuid, Dictionary<string, ConfigMap> map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+
+        return InstanceManager.TryUpdateConfigMap(uuid, map);
     }
 
     /// <summary>

@@ -23,12 +23,22 @@ internal static partial class QQEventParser
     /// <param name="envelope">回调信封</param>
     public static ProxyMessage? Parse(string proxyId, Guid uuid, BaseMessageObj envelope)
     {
-        return envelope.Type switch
+        try
         {
-            EventNames.GroupAtMessageCreate or GroupMessage => ParseGroup(proxyId, uuid, envelope),
-            EventNames.GroupMessageCreate => ParseC2C(proxyId, uuid, envelope),
-            _ => null
-        };
+            return envelope.Type switch
+            {
+                EventNames.GroupAtMessageCreate or GroupMessage => ParseGroup(proxyId, uuid, envelope),
+                EventNames.GroupMessageCreate => ParseC2C(proxyId, uuid, envelope),
+                _ => null
+            };
+        }
+        catch (Exception e)
+        {
+            // 解析失败要把报文留下来，不然只能看到一句"收到事件"
+            ProxyInstance.Logger.Error(e, ProxyLang.GetLang(ProxyLangKey.EventParseError, envelope.Type, envelope.Data));
+
+            return null;
+        }
     }
 
     /// <summary>

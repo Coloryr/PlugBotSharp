@@ -37,7 +37,7 @@ public interface IProxy
     /// <param name="target">群 openid 或用户 openid</param>
     /// <param name="scene">会话类型</param>
     /// <param name="message">消息</param>
-    /// <param name="replyId">被动回复的消息 id</param>
+    /// <param name="replyId">被动回复的消息 id，主动发送传 null</param>
     /// <param name="sequence">回复序号</param>
-    public Task<SendGroupMessageResObj?> Send(string target, MessageScene scene, BaseMessage message, string? replyId, int sequence);
+    public Task<SendResult> Send(string target, MessageScene scene, BaseMessage message, string? replyId, int sequence);
 }

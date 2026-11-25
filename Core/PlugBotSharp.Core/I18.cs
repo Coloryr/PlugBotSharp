@@ -48,6 +48,8 @@ internal enum BotLangKey
     NugetNoLib,
     NugetCompleted,
     NugetFailed,
+    NugetVersionNotFound,
+    NugetDependencyFail,
     ComponentDepMissing,
     ComponentDepVersion,
 
@@ -250,6 +252,10 @@ internal static class BotLang
                 return "NuGet 依赖补全完成，共 {0} 个包";
             case BotLangKey.NugetFailed:
                 return "以下 NuGet 依赖补全失败: {0}";
+            case BotLangKey.NugetVersionNotFound:
+                return "找不到匹配的版本";
+            case BotLangKey.NugetDependencyFail:
+                return "NuGet 依赖 {0} {1} 没装上，跳过: {2}";
             case BotLangKey.ComponentDepMissing:
                 return "组件 {0} 依赖的组件 {1} 未找到";
             case BotLangKey.ComponentDepVersion:
@@ -541,6 +547,10 @@ internal static class BotLang
                 return "NuGet dependencies ready, {0} package(s)";
             case BotLangKey.NugetFailed:
                 return "NuGet dependencies failed: {0}";
+            case BotLangKey.NugetVersionNotFound:
+                return "no matching version";
+            case BotLangKey.NugetDependencyFail:
+                return "NuGet dependency {0} {1} was not installed, skipped: {2}";
             case BotLangKey.ComponentDepMissing:
                 return "Component {0} depends on missing component {1}";
             case BotLangKey.ComponentDepVersion:

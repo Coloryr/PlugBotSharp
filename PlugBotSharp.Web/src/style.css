@@ -140,6 +140,106 @@ body {
   color: var(--muted);
 }
 
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px 6px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.panel-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.panel-full {
+  margin-bottom: 16px;
+}
+
+.panel .table {
+  margin-top: 4px;
+}
+
+.state-table th,
+.state-table td {
+  padding: 8px 10px;
+}
+
+.inline-kv > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--accent);
+  list-style: none;
+}
+
+.inline-kv > summary::-webkit-details-marker {
+  display: none;
+}
+
+.inline-kv .kv-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  max-height: 140px;
+  overflow: auto;
+}
+
+.inline-kv .kv-line {
+  display: flex;
+  gap: 10px;
+  color: #57606a;
+}
+
+.inline-kv .kv-key {
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.inline-kv .kv-value {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.status-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+}
+
+.status-row:first-child {
+  border-top: 0;
+}
+
+.status-main {
+  min-width: 0;
+}
+
+.status-main .name {
+  font-size: 13px;
+}
+
 .section {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -349,6 +449,52 @@ select:disabled {
 .state-dep {
   background: #eef6ff;
   color: #1f6feb;
+}
+
+.state-kv {
+  background: #eef6ff;
+  color: #1f6feb;
+}
+
+.state-kv > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.state-kv > summary::-webkit-details-marker {
+  display: none;
+}
+
+.state-kv[open] {
+  flex-basis: 100%;
+  background: #f7fbff;
+}
+
+.state-kv .kv-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.state-kv .kv-line {
+  display: flex;
+  gap: 10px;
+  color: #57606a;
+}
+
+.state-kv .kv-key {
+  max-width: 240px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.state-kv .kv-value {
+  margin-left: auto;
+  font-weight: 600;
 }
 
 .dep {

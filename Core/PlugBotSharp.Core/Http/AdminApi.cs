@@ -44,7 +44,7 @@ internal static class AdminApi
     }
 
     /// <summary>
-    /// 总览：版本、运行时长、组件与实例数量
+    /// 总览：版本、运行时长、组件与实例的数量，以及它们的实时状态
     /// </summary>
     private static IResult Overview()
     {
@@ -71,7 +71,25 @@ internal static class AdminApi
                 total = instances.Count,
                 loaded = instances.Count(x => x.Loaded),
                 enabled = instances.Count(x => x.Enabled)
-            }
+            },
+            // 状态面板：每个组件 / 实例一行，带上它上报的自定义状态
+            componentItems = components.Select(x => new
+            {
+                id = x.Meta.Id,
+                name = x.Meta.Name,
+                type = x.Meta.Type.ToString(),
+                version = x.Meta.Version,
+                state = ComponentManager.GetState(x.Meta.Id),
+                states = StateRegistry.Get(ComponentManager.FindObject(x.Meta.Id))
+            }).ToList(),
+            instanceItems = instances.Select(x => new
+            {
+                uuid = x.Uuid.ToString(),
+                proxy = x.Proxy,
+                name = x.Name,
+                state = x.Loaded ? x.Enabled ? "enabled" : "disabled" : "unloaded",
+                states = InstanceManager.GetStates(x.Uuid)
+            }).ToList()
         });
     }
 

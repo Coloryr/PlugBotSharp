@@ -72,6 +72,37 @@ public class ConfigMapTests
         Assert.Contains("\"type\": \"enum\"", json);
     }
 
+[Fact]
+    public void Integer_widths_and_double_round_trip()
+    {
+        var map = new Dictionary<string, ConfigMap>
+        {
+            ["s"] = new ConfigShortMap { Key = "s", Value = -1, Min = -10, Max = 10, Default = 0 },
+            ["us"] = new ConfigUshortMap { Key = "us", Value = 60000, Max = ushort.MaxValue },
+            ["ui"] = new ConfigUintMap { Key = "ui", Value = 4000000000, Max = uint.MaxValue },
+            ["l"] = new ConfigLongMap { Key = "l", Value = 9000000000, Max = long.MaxValue },
+            ["ul"] = new ConfigUlongMap { Key = "ul", Value = 18000000000000000000, Max = ulong.MaxValue },
+            ["d"] = new ConfigDoubleMap { Key = "d", Value = 0.25, Min = 0, Max = 1, Default = 0.5 }
+        };
+
+        var json = JsonSerializer.Serialize(map, ConfigMapContext.Default.DictionaryStringConfigMap);
+        var back = JsonSerializer.Deserialize(json, ConfigMapContext.Default.DictionaryStringConfigMap)!;
+
+        Assert.Equal((short)-1, Assert.IsType<ConfigShortMap>(back["s"]).Value);
+        Assert.Equal((ushort)60000, Assert.IsType<ConfigUshortMap>(back["us"]).Value);
+        Assert.Equal(4000000000u, Assert.IsType<ConfigUintMap>(back["ui"]).Value);
+        Assert.Equal(9000000000L, Assert.IsType<ConfigLongMap>(back["l"]).Value);
+        Assert.Equal(18000000000000000000UL, Assert.IsType<ConfigUlongMap>(back["ul"]).Value);
+        Assert.Equal(0.25, Assert.IsType<ConfigDoubleMap>(back["d"]).Value);
+
+        Assert.Contains("\"type\": \"short\"", json);
+        Assert.Contains("\"type\": \"ushort\"", json);
+        Assert.Contains("\"type\": \"uint\"", json);
+        Assert.Contains("\"type\": \"long\"", json);
+        Assert.Contains("\"type\": \"ulong\"", json);
+        Assert.Contains("\"type\": \"double\"", json);
+    }
+
     [Fact]
     public void Dictionary_round_trips_by_key()
     {

@@ -41,7 +41,7 @@ public class GenshinInstance : IProxyInstasnce
     /// <summary>
     /// 收到条数的状态句柄
     /// </summary>
-    private StateHandle? _receiveState;
+    private StateValueHandle? _receiveState;
 
     /// <summary>
     /// 发出去的消息 id -> 发起的实例，core 的回复会带回同一个 msg_id
@@ -107,7 +107,7 @@ public class GenshinInstance : IProxyInstasnce
         _send = register.RegisterSend();
 
         // 收到 core 下发的消息条数
-        _receiveState = register.RegisterState("recv");
+        _receiveState = register.RegisterState("recv", "收到条数", "gsuid_core 下发的消息条数");
     }
 
     /// <inheritdoc/>
@@ -214,6 +214,14 @@ public class GenshinInstance : IProxyInstasnce
                 Default = 5,
                 Description = "断线后多少秒重连",
                 Placeholder = "5"
+            },
+            ["CommandStart"] = new ConfigListMap
+            {
+                Key = "CommandStart",
+                Value = [.. _data.CommandStart],
+                Default = ["/"],
+                MaxCount = 10,
+                Description = "转发给 core 前剥掉的前缀，一行一个；core 的 command_start 配了前缀就留空"
             }
         };
     }
@@ -239,6 +247,11 @@ public class GenshinInstance : IProxyInstasnce
         if (data.TryGetValue("ReconnectSeconds", out var reconnect) && reconnect is ConfigIntMap reconnectMap)
         {
             _data.ReconnectSeconds = Math.Clamp(reconnectMap.Value, 3, 600);
+        }
+
+        if (data.TryGetValue("CommandStart", out var commandStart) && commandStart is ConfigListMap commandStartMap)
+        {
+            _data.CommandStart = [.. commandStartMap.Value.Where(x => !string.IsNullOrEmpty(x))];
         }
 
         SaveConfig();
@@ -303,7 +316,7 @@ public class GenshinInstance : IProxyInstasnce
             }
 
             _received++;
-            _receiveState?.Set(_received.ToString());
+            _receiveState?.Set(_received);
 
             // 这条是刚才转出去的消息的回复，直接发回发起的那个实例（QQ / OneBot …）
             var route = FindRoute(receive);
@@ -356,7 +369,15 @@ public class GenshinInstance : IProxyInstasnce
             return [];
         }
 
-        var receive = ToReceive(message, message.Message);
+        var source = message.Message;
+
+        // 用户习惯打 /命令，core 的 command_start 是空的时候要自己剥掉，和 NoneBot 的行为对齐
+        if (source is TextMessage text && StripCommandStart(text.Text) is { } command)
+        {
+            source = new TextMessage(command);
+        }
+
+        var receive = ToReceive(message, source);
 
         if (receive is not null)
         {
@@ -365,6 +386,23 @@ public class GenshinInstance : IProxyInstasnce
         }
 
         return [];
+    }
+
+    /// <summary>
+    /// 剥掉命令前缀，按配置的 CommandStart 来
+    /// </summary>
+    /// <param name="text">用户输入</param>
+    private string StripCommandStart(string text)
+    {
+        foreach (var start in _data.CommandStart ?? [])
+        {
+            if (!string.IsNullOrEmpty(start) && text.StartsWith(start, StringComparison.Ordinal))
+            {
+                return text[start.Length..].TrimStart();
+            }
+        }
+
+        return text;
     }
 
     /// <summary>

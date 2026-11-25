@@ -41,7 +41,7 @@ public class HttpHookProxy : IProxy
     }
 
     /// <inheritdoc/>
-    public Task<SendGroupMessageResObj?> Send(string target, MessageScene scene, BaseMessage message, string? replyId, int sequence)
+    public Task<SendResult> Send(string target, MessageScene scene, BaseMessage message, string? replyId, int sequence)
     {
         return QQApi.Send(_token ?? "", target, scene, message, replyId, sequence);
     }

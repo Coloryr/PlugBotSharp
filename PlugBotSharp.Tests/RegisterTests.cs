@@ -40,7 +40,7 @@ public class RegisterTests : ComponentTestBase
 
             Assert.NotNull(received);
             Assert.Equal("[demo]ping", received!.Name);
-            Assert.Equal(42, received.Data!["value"]!.GetValue<int>());
+            Assert.Equal(42, Assert.IsType<JsonObject>(received.Data)["value"]!.GetValue<int>());
         }
         finally
         {
@@ -86,12 +86,12 @@ public class RegisterTests : ComponentTestBase
         {
             register.SubscribePluginEvent("demo", "ping", e => received = e);
 
-            ping.Raise(JsonValue.Create(7));
+            ping.Raise(7);
 
             Assert.NotNull(received);
             Assert.Equal("[demo]ping", received!.Name);
             Assert.Equal("demo", received.Id);
-            Assert.Equal(7, received.Data!.GetValue<int>());
+            Assert.Equal(7, received.Data);
         }
         finally
         {
@@ -147,7 +147,7 @@ public class RegisterTests : ComponentTestBase
     }
 
     [Fact]
-    public void Primitive_payloads_become_json_values()
+    public void Primitive_payloads_keep_their_type()
     {
         var plugin = new FakePlugin();
         var register = new ComponentRegister(plugin, "demo");
@@ -168,14 +168,62 @@ public class RegisterTests : ComponentTestBase
             handle.Raise();
 
             Assert.Equal(7, received.Count);
-            Assert.Equal("hi", received[0].Data!.GetValue<string>());
-            Assert.Equal(42, received[1].Data!.GetValue<int>());
-            Assert.True(received[2].Data!.GetValue<bool>());
-            Assert.Equal(1.5, received[3].Data!.GetValue<double>());
-            Assert.Equal(1, received[4].Data!["value"]!.GetValue<int>());
+            Assert.Equal("hi", received[0].Data);
+            Assert.Equal(42, Assert.IsType<int>(received[1].Data));
+            Assert.True(Assert.IsType<bool>(received[2].Data));
+            Assert.Equal(1.5, Assert.IsType<double>(received[3].Data));
+            Assert.Equal(1, Assert.IsType<JsonObject>(received[4].Data)["value"]!.GetValue<int>());
             Assert.Equal("hi", Assert.IsType<TextMessage>(received[5].Message).Text);
             Assert.Null(received[6].Data);
             Assert.Null(received[6].Message);
+        }
+        finally
+        {
+            EventManager.Unregister(plugin);
+        }
+    }
+
+    [Fact]
+    public void Every_primitive_overload_carries_its_own_type()
+    {
+        var plugin = new FakePlugin();
+        var register = new ComponentRegister(plugin, "demo");
+        var handle = register.RegisterPluginEvent("typed");
+
+        var received = new List<object?>();
+
+        try
+        {
+            register.SubscribePluginEvent("demo", "typed", e => received.Add(e.Data));
+
+            handle.Raise('x');
+            handle.Raise(true);
+            handle.Raise((byte)1);
+            handle.Raise((sbyte)-2);
+            handle.Raise((short)-3);
+            handle.Raise((ushort)4);
+            handle.Raise(5);
+            handle.Raise(6u);
+            handle.Raise(7L);
+            handle.Raise(8UL);
+            handle.Raise(1.5f);
+            handle.Raise(2.5);
+            handle.Raise(3.5m);
+
+            Assert.Equal(13, received.Count);
+            Assert.Equal('x', Assert.IsType<char>(received[0]));
+            Assert.True(Assert.IsType<bool>(received[1]));
+            Assert.Equal((byte)1, Assert.IsType<byte>(received[2]));
+            Assert.Equal((sbyte)-2, Assert.IsType<sbyte>(received[3]));
+            Assert.Equal((short)-3, Assert.IsType<short>(received[4]));
+            Assert.Equal((ushort)4, Assert.IsType<ushort>(received[5]));
+            Assert.Equal(5, Assert.IsType<int>(received[6]));
+            Assert.Equal(6u, Assert.IsType<uint>(received[7]));
+            Assert.Equal(7L, Assert.IsType<long>(received[8]));
+            Assert.Equal(8UL, Assert.IsType<ulong>(received[9]));
+            Assert.Equal(1.5f, Assert.IsType<float>(received[10]));
+            Assert.Equal(2.5, Assert.IsType<double>(received[11]));
+            Assert.Equal(3.5m, Assert.IsType<decimal>(received[12]));
         }
         finally
         {

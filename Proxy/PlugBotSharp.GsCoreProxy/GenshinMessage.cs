@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using PlugBotSharp.Core.Messages;
 
 namespace PlugBotSharp.GsCoreProxy;
@@ -44,10 +45,18 @@ public static class GenshinMessage
     public static List<BaseMessage> FromGs(IEnumerable<GsMessage> segments, out string? replyId)
     {
         var list = new List<BaseMessage>();
-
-        replyId = null;
+        var reply = (string?)null;
 
         foreach (var segment in segments)
+        {
+            Append(segment);
+        }
+
+        replyId = reply;
+
+        return list;
+
+        void Append(GsMessage segment)
         {
             switch (segment.Type)
             {
@@ -89,11 +98,11 @@ public static class GenshinMessage
 
                     break;
                 case "reply_id":
-                    replyId = Data(segment);
+                    reply = Data(segment);
 
-                    if (!string.IsNullOrEmpty(replyId))
+                    if (!string.IsNullOrEmpty(reply))
                     {
-                        list.Add(new ReplyMessage(replyId));
+                        list.Add(new ReplyMessage(reply));
                     }
 
                     break;
@@ -111,19 +120,34 @@ public static class GenshinMessage
                     }
 
                     break;
+                case "node":
+                    // core 的合并转发节点，QQ 发不了合并转发就拆开成普通消息
+                    if (segment.Data is JsonArray node)
+                    {
+                        foreach (var item in node.Deserialize(GenshinJsonContext.Default.ListGsMessage) ?? [])
+                        {
+                            Append(item);
+                        }
+                    }
+
+                    break;
+                case "group":
+                    // 目标群标记，发送时用不到
+                    break;
                 default:
                     // 不认识的段原样交给下游代理解释
                     if (!string.IsNullOrEmpty(segment.Type))
                     {
-                        list.Add(new RawMessage(SegmentName,
-                            JsonSerializer.SerializeToNode(segment, GenshinJsonContext.Default.GsMessage)!));
+                        var raw = JsonSerializer.SerializeToNode(segment, GenshinJsonContext.Default.GsMessage)!;
+
+                        GenshinLang.Log.Debug($"未知消息段: {raw.ToJsonString()}");
+
+                        list.Add(new RawMessage(SegmentName, raw));
                     }
 
                     break;
             }
         }
-
-        return list;
     }
 
     /// <summary>

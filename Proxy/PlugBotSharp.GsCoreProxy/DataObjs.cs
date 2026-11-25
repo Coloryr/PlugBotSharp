@@ -23,6 +23,10 @@ public record InstanceDataObj
     /// 断线后多少秒重连
     /// </summary>
     public int ReconnectSeconds { get; set; } = 5;
+    /// <summary>
+    /// 转发给 core 前剥掉的前缀，留空表示原样转发
+    /// </summary>
+    public List<string> CommandStart { get; set; } = ["/"];
 }
 
 /// <summary>

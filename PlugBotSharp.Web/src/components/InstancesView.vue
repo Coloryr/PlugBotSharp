@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { notify } from '../toast'
 import ConfigDialog from './ConfigDialog.vue'
+import StateChips from './StateChips.vue'
 
 const instances = ref([])
 const proxies = ref([])
@@ -171,11 +172,7 @@ onBeforeUnmount(() => {
           <td>
             <div class="name">{{ item.name || '未命名' }}</div>
             <div class="meta mono" :title="item.folder">{{ item.uuid }}</div>
-            <div v-if="item.states && Object.keys(item.states).length" class="deps">
-              <span v-for="(value, name) in item.states" :key="name" class="dep state-dep">
-                {{ name }}: {{ value }}
-              </span>
-            </div>
+            <StateChips :states="item.states" />
           </td>
           <td><span class="tag">{{ item.proxy }}</span></td>
           <td>

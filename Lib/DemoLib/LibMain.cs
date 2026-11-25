@@ -1,8 +1,11 @@
-﻿using PlugBotSharp.Core.Plugin;
+using PlugBotSharp.Core.Lib;
 
-namespace PlugBotSharp.Core.Lib;
+namespace DemoLib;
 
-public class CorePlugin : IBaseLib
+/// <summary>
+/// 示例运行库：运行库只负责提供类型，不参与启用 / 禁用
+/// </summary>
+public class LibMain : IBaseLib
 {
     /// <inheritdoc/>
     public bool Init(string path)

@@ -57,13 +57,23 @@ public class PluginMain : IBasePlugin
     /// <summary>
     /// 状态句柄，注册阶段拿到，之后随时更新
     /// </summary>
-    private StateHandle? _pingState;
+    private StateValueHandle? _pingState;
 
-    private StateHandle? _eventState;
+    private StateValueHandle? _eventState;
 
-    private StateHandle? _replyState;
+    private StateValueHandle? _replyState;
 
-    private StateHandle? _blockedState;
+    private StateValueHandle? _blockedState;
+
+    /// <summary>
+    /// 各命令被调用的次数，只读键值状态，面板上能展开看
+    /// </summary>
+    private StateKvHandle? _commandState;
+
+    /// <summary>
+    /// 命令 -&gt; 次数
+    /// </summary>
+    private readonly Dictionary<string, int> _commands = new();
 
     /// <summary>
     /// 被拦截器拦下的消息条数
@@ -79,10 +89,11 @@ public class PluginMain : IBasePlugin
         _ping = register.RegisterPluginEvent("ping");
 
         // 注册状态，句柄留着随时更新
-        _pingState = register.RegisterState("pings");
-        _eventState = register.RegisterState("events");
-        _replyState = register.RegisterState("replies");
-        _blockedState = register.RegisterState("blocked");
+        _pingState = register.RegisterState("pings", "ping 次数", "收到 [demo]ping 自定义事件的次数");
+        _eventState = register.RegisterState("events", "事件次数", "收到的插件事件条数，含生命周期事件");
+        _replyState = register.RegisterState("replies", "回复条数", "累计回复的消息条数");
+        _blockedState = register.RegisterState("blocked", "拦截条数", "被发送拦截器拦下、没有发出去的消息条数");
+        _commandState = register.RegisterKvState("commands", "命令次数", "各命令被调用的次数，键是命令本身");
 
         // 发送前拦截：返回 true 就把这条消息丢掉，不发给真实平台
         register.SubscribeSendFilter((_, reply) =>
@@ -90,7 +101,7 @@ public class PluginMain : IBasePlugin
             if (reply is TextMessage text && text.Text.Contains("拦截"))
             {
                 _blocked++;
-                _blockedState?.Set(_blocked.ToString());
+                _blockedState?.Set(_blocked);
 
                 return Task.FromResult(true);
             }
@@ -102,14 +113,14 @@ public class PluginMain : IBasePlugin
         register.SubscribePluginEvent(_ping.Name, e =>
         {
             _pings++;
-            _pingState?.Set(_pings.ToString());
+            _pingState?.Set(_pings);
         });
 
         // 广播订阅：生命周期事件和所有自定义事件都收
         register.SubscribePlugin(e =>
         {
             _events++;
-            _eventState?.Set(_events.ToString());
+            _eventState?.Set(_events);
         });
     }
 
@@ -166,7 +177,9 @@ public class PluginMain : IBasePlugin
             return [];
         }
 
-        var replies = text.Text.Trim().ToLowerInvariant() switch
+        var command = text.Text.Trim().ToLowerInvariant();
+
+        var replies = command switch
         {
             "/text" => [new TextMessage(_text)],
             "/markdown" => [new MarkdownMessage("**DemoPlugin**\n> 这是一条 markdown 消息")],
@@ -182,7 +195,12 @@ public class PluginMain : IBasePlugin
         if (replies.Count > 0)
         {
             _replies += replies.Count;
-            _replyState?.Set(_replies.ToString());
+            _replyState?.Set(_replies);
+
+            var count = _commands.TryGetValue(command, out var old) ? old + 1 : 1;
+
+            _commands[command] = count;
+            _commandState?.Set(command, count);
         }
 
         return replies;

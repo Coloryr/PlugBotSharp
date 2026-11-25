@@ -16,12 +16,37 @@ const emit = defineEmits(['close', 'done'])
 
 const typeName = {
   int: '整数',
+  short: '短整数',
+  ushort: '无符号短整数',
+  uint: '无符号整数',
+  long: '长整数',
+  ulong: '无符号长整数',
   float: '小数',
+  double: '双精度小数',
   bool: '开关',
   string: '文本',
   list: '列表',
   kv: '键值',
   enum: '单选'
+}
+
+const integerTypes = ['int', 'short', 'ushort', 'uint', 'long', 'ulong']
+const decimalTypes = ['float', 'double']
+
+/**
+ * 整数类型的输入框
+ * @param {string} type 配置类型
+ */
+function isInteger(type) {
+  return integerTypes.includes(type)
+}
+
+/**
+ * 小数类型的输入框
+ * @param {string} type 配置类型
+ */
+function isDecimal(type) {
+  return decimalTypes.includes(type)
 }
 
 const items = ref([])
@@ -91,15 +116,17 @@ function clamp(value, item) {
  * @param {object} item 配置项
  */
 function valueOf(item) {
+  if (isInteger(item.type)) {
+    const num = Number(item.value)
+    return clamp(Number.isFinite(num) ? Math.trunc(num) : 0, item)
+  }
+
+  if (isDecimal(item.type)) {
+    const num = Number(item.value)
+    return clamp(Number.isFinite(num) ? num : 0, item)
+  }
+
   switch (item.type) {
-    case 'int': {
-      const num = Number(item.value)
-      return clamp(Number.isFinite(num) ? Math.trunc(num) : 0, item)
-    }
-    case 'float': {
-      const num = Number(item.value)
-      return clamp(Number.isFinite(num) ? num : 0, item)
-    }
     case 'bool':
       return !!item.value
     case 'string':
@@ -197,7 +224,7 @@ function defaultText(item) {
 function hintOf(item) {
   const parts = []
 
-  if ((item.type === 'int' || item.type === 'float') && hasRange(item)) {
+  if ((isInteger(item.type) || isDecimal(item.type)) && hasRange(item)) {
     parts.push(`范围 ${item.min} ~ ${item.max}`)
   }
 
@@ -274,7 +301,7 @@ function close() {
           <p v-if="item.description" class="cfg-desc">{{ item.description }}</p>
 
           <input
-            v-if="item.type === 'int'"
+            v-if="isInteger(item.type)"
             v-model.number="item.value"
             type="number"
             step="1"
@@ -283,7 +310,7 @@ function close() {
             :placeholder="item.placeholder || undefined"
           />
           <input
-            v-else-if="item.type === 'float'"
+            v-else-if="isDecimal(item.type)"
             v-model.number="item.value"
             type="number"
             step="0.01"

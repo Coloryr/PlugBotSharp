@@ -13,19 +13,20 @@
 
   <!-- 组件只参与构建，dll 从打包好的 zip 里解出来，不直接引用 -->
   <ItemGroup>
-    <ProjectReference Include="..\Lib\PlugBotSharp.Core.Lib\PlugBotSharp.Core.Lib.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\Lib\DemoLib\DemoLib.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Lib\PlugBotSharp.QQLib\PlugBotSharp.QQLib.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Lib\PlugBotSharp.OneBotLib\PlugBotSharp.OneBotLib.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Plugin\DemoPlugin\DemoPlugin.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Proxy\PlugBotSharp.QQProxy\PlugBotSharp.QQProxy.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Proxy\PlugBotSharp.OneBotProxy\PlugBotSharp.OneBotProxy.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Proxy\PlugBotSharp.GsCoreProxy\PlugBotSharp.GsCoreProxy.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\Proxy\ProxyDemo\ProxyDemo.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
 
   <!-- 组件包解到运行目录的 Components/{组件id} -->
   <ItemGroup>
-    <DeployComponent Include="Components\core">
-      <Zip>..\Lib\PlugBotSharp.Core.Lib\bin\$(Configuration)\$(TargetFramework)\PlugBotSharp.Core.Lib.zip</Zip>
+    <DeployComponent Include="Components\demolib">
+      <Zip>..\Lib\DemoLib\bin\$(Configuration)\$(TargetFramework)\DemoLib.zip</Zip>
     </DeployComponent>
     <DeployComponent Include="Components\qqlib">
       <Zip>..\Lib\PlugBotSharp.QQLib\bin\$(Configuration)\$(TargetFramework)\PlugBotSharp.QQLib.zip</Zip>
@@ -44,6 +45,9 @@
     </DeployComponent>
     <DeployComponent Include="Components\gscoreproxy">
       <Zip>..\Proxy\PlugBotSharp.GsCoreProxy\bin\$(Configuration)\$(TargetFramework)\PlugBotSharp.GsCoreProxy.zip</Zip>
+    </DeployComponent>
+    <DeployComponent Include="Components\proxydemo">
+      <Zip>..\Proxy\ProxyDemo\bin\$(Configuration)\$(TargetFramework)\ProxyDemo.zip</Zip>
     </DeployComponent>
   </ItemGroup>
 

@@ -281,9 +281,9 @@ internal static class EventManager
     /// </summary>
     /// <param name="id">来源插件 id</param>
     /// <param name="name">事件名</param>
-    /// <param name="data">事件数据，JSON 节点</param>
+    /// <param name="data">事件数据，基础类型或 JSON 节点</param>
     /// <param name="message">事件带的消息，和 data 二选一</param>
-    public static void RaisePlugin(string id, string name, JsonNode? data = null, BaseMessage? message = null)
+    public static void RaisePlugin(string id, string name, object? data = null, BaseMessage? message = null)
     {
         HandlePlugin(new PluginEvent
         {

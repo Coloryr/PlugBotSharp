@@ -25,8 +25,8 @@ public class WebSocketProxy : IProxy
     }
 
     /// <inheritdoc/>
-    public Task<SendGroupMessageResObj?> Send(string target, MessageScene scene, BaseMessage message, string? replyId, int sequence)
+    public Task<SendResult> Send(string target, MessageScene scene, BaseMessage message, string? replyId, int sequence)
     {
-        return Task.FromResult<SendGroupMessageResObj?>(null);
+        return Task.FromResult(new SendResult(null, 0));
     }
 }

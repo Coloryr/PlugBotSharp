@@ -1,522 +1,153 @@
 # PlugBotSharp 开发文档
 
-面向二次开发和写组件的人。使用说明见 [根目录 README](../README.md)。
+写给要**写组件**和**改宿主**的人。装组件、用面板、看协议细节见 [根目录 README](../README.md)。
 
-## 解决方案结构
+## 先选：写插件还是写代理
 
-| 目录 | 项目 | 说明 |
+| 你要做的事 | 写什么 | 为什么 |
 | --- | --- | --- |
-| `Core/` | `PlugBotSharp.Core` | 宿主核心，引用 `Microsoft.AspNetCore.App`，内嵌管理面板 |
-| `Lib/` | `PlugBotSharp.Core.Lib` | 核心运行库组件（id `core`，Type `Lib`），插件通常依赖它 |
-| `Lib/` | `PlugBotSharp.QQLib` | QQ 平台模型（消息体 / 键盘 / 卡片）和 `BaseMessage` ↔ QQ 消息转换（Type `Lib`，代理和插件共用） |
-| `Lib/` | `PlugBotSharp.OneBotLib` | OneBot 11 消息段模型和 `BaseMessage` 转换、平台专属消息段（Type `Lib`） |
-| `Plugin/` | `DemoPlugin` | 示例插件：演示消息事件和各类消息体 |
-| `Proxy/` | `PlugBotSharp.QQProxy` | 官方 QQ 通信代理组件，依赖 `qqlib` |
-| `Proxy/` | `PlugBotSharp.OneBotProxy` | OneBot 11 / 12 通信代理组件，依赖 `onebotlib` |
-| `Proxy/` | `PlugBotSharp.GsCoreProxy` | gsuid_core 通信代理组件（id `gscoreproxy`）：和 core 双向收发 |
-| 根目录 | `PlugBotSharp.Run` | 启动入口，运行目录为程序所在目录 |
-| 根目录 | `PlugBotSharp.Web` | Vue 3 + Vite 管理面板 |
-| 根目录 | `PlugBotSharp.Tests` | xUnit 测试 |
-| `build/` | `MetaGen` | 从 `Meta.cs` 生成 `Meta.json` 的工具（可打包成 NuGet） |
-| `build/` | `ComponentPackage.targets` | 组件打包：生成清单并把清单里声明的 dll 打成一个 zip |
+| 收到消息后处理它：回复、查数据、发图、做指令 | **插件 Plugin** | 插件只认统一消息模型，不用管消息是从 QQ、OneBot 还是别的平台来的 |
+| 接一个平台：登录、收事件、发消息、签名、断线重连 | **代理 Proxy** | 代理把平台协议翻译成统一消息，插件一行都不用改 |
+| 只把模型 / 工具类提供给别人，自己不处理消息 | **运行库 Lib** | 只有 `Init` / `Load` / `Unload`，不参与启用 / 禁用 |
 
-`PlugBotSharp.Core` 内部按职责分目录，命名空间还是 `PlugBotSharp.Core`，组件里的 `using` 不用改：
+```
+外部平台 ──协议报文──▶ 代理 Proxy ──ProxyMessage──▶ 宿主分发 ──▶ 插件 Plugin
+     ▲                     │                                   │
+     └────── 平台报文 ◀─────┴────── BaseMessage ◀──────────────┘
+```
 
-| 目录 | 放什么 |
-| --- | --- |
-| `Components/` | 组件装载和生命周期：`IComponent`、`ComponentLoader`、`ComponentManager`、`ComponentInstaller`、`InstanceManager`、`StateManager`、`BaseAssembly` |
-| `Register/` | 注册阶段的注册器和句柄：`IRegister`、`ComponentRegister`、`RaiseHandle`、`StateHandle`、`SendHandle`、`ProxyEventHandle` |
-| `Events/` | 事件中心：`EventManager`、`MessageEvent`、`PluginEvent`、`ProxyEvent`、`PluginEventName` |
-| 其他 | `Auth/`、`Configs/`、`Http/`、`Lib/`、`Messages/`、`Nuget/`、`Plugin/`、`Proxy/`，命名空间和目录同名 |
+判断方法很简单：
 
-根目录放宿主入口和小工具：`BotManager`（启动 / 加载）、`ConsoleManager`（控制台指令）、`HttpManager`（管理面板）、`ComponentApi`（组件能调的宿主接口）、`CertStore`（证书仓库）、`Ed25519`（签名校验）、`I18`（多语言）。
+- **只是处理消息内容**，不关心消息从哪来 → 写插件，例子是 [DemoPlugin](../Plugin/DemoPlugin)
+- **要接一个新平台 / 新协议**，或者把别的系统的消息转进来 → 写代理，例子是 [ProxyDemo](../Proxy/ProxyDemo)
+- **别的组件要用你的类型，但你自己不发不收消息** → 写运行库，例子是 [DemoLib](../Lib/DemoLib)
 
-## 组件清单
+代理和插件之间只有一条约定：代理把 `ProxyMessage` 注入进来，插件返回 `BaseMessage`，代理再把它翻译成平台能发的格式。所以：
 
-组件目录里只需要一个 `Meta.json`（旧的 `Plugin.json` / `Proxy.json` 已不再识别）：
+- 插件里**不要**出现平台相关的代码（QQ 的 `openid`、OneBot 的 `user_id` 这类字段）
+- 代理里**不要**写业务逻辑，收到什么就交出去，插件返回什么就发什么
+- 多个代理同时在线时，插件收到的是同一套模型，回复交给发起这次分发的实例发回
 
-```json
+## 快速上手
+
+最小插件（完整例子见 [plugin.md](plugin.md)）：
+
+```csharp
+public class PluginMain : IBasePlugin
 {
-  "Name": "QQProxy",
-  "Id": "qq",
-  "Version": "1.0.0",
-  "Description": "官Q机器人",
-  "Type": "Proxy",
-  "Dlls": ["PlugBotSharp.QQProxy.dll"],
-  "Deps": [
-    { "Type": "Component", "Id": "core", "Version": ">=1.0.0" },
-    { "Type": "Nuget", "Id": "SkiaSharp", "Version": "4.157.0" }
-  ]
+    public bool Init(string path) => true;
+    public bool Load() => true;
+    public bool Unload() => true;
+    public bool Enable() => true;
+    public bool Disable() => true;
+    public Dictionary<string, ConfigMap> ConfigMap() => new();
+    public void UpdateMap(Dictionary<string, ConfigMap> data) { }
+
+    public void RegisterEventHook(IRegister register)
+    {
+        // 收到消息就回一句
+        register.SubscribeMessage(message => message.Message is TextMessage text
+            ? [new TextMessage("收到：" + text.Text)]
+            : []);
+    }
 }
 ```
 
-- `Type`：`Plugin` / `Proxy` / `Lib`
-- `Dlls`：真正属于这个组件的程序集，会被打在安装包里
-- `Deps`：`Component` 是组件依赖，`Nuget` 会自动下载
-- 版本表达式支持 `>=1.0.0`、`>1.0.0`、`<=1.0.0`、`<1.0.0`、`=1.0.0` / `==1.0.0`（等于）、逗号组合；裸版本号（`1.0.0`）按最低版本处理，等价于 `>=1.0.0`
+最小代理（完整例子见 [proxy.md](proxy.md)）：继承 `IBaseProxy`，`CreateInstance()` 返回一个 `IProxyInstasnce`；实例在 `RegisterEventHook` 里拿到 `RegisterProxyEvent()` 的句柄，收到平台消息时调 `Dispatch(message)`，返回值就是要回的消息。
 
-### 打包
-
-组件工程引用 `build/ComponentPackage.targets` 并写一个 `Meta.cs`：
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="..\build\MetaGen\MetaGen.csproj" ReferenceOutputAssembly="false" />
-</ItemGroup>
-<Import Project="..\build\ComponentPackage.targets" />
-```
-
-构建后自动生成 `Meta.json`，并把清单声明的 dll 打成 `{AssemblyName}.zip`，直接拖进面板安装即可。
-
-### 组件之间的依赖
-
-- 依赖别的组件只写 `Deps`，**不要把对方的 dll 放进自己的 `Dlls`**
-- 加载上下文会先找自己目录里的 dll，打进包就等于每个组件各加载一份，类型标识不再相同
-- 组件依赖会按拓扑序加载，被依赖的组件先加载；卸载时会先卸载依赖它的组件
-
-## 组件接口
-
-组件能力拆在几个接口里，宿主只依赖接口：
-
-| 接口 | 方法 |
-| --- | --- |
-| `IBaseComponent` | `Load` `Reload` `Unload` `Enable` `Disable` `ConfigMap` `UpdateMap` |
-| `IComponent : IBaseComponent` | `Init(string path)` |
-| `IBasePlugin : IComponent` | `RegisterEventHook()` |
-| `IBaseProxy : IComponent` | `CreateInstance()` `Reload(IProxyInstasnce)` |
-| `IProxyInstasnce : IBaseComponent` | `Init(path, uuid)` `RegisterEventHook()` `Tick()` `SendAsync(ProxyMessage, BaseMessage)` |
-| `IBaseLib` | `Init` `Load` `Unload`（运行库不参与启停） |
-
-- 启停方法都是同步的 `bool`，`Reload`、`UpdateMap`、`RegisterEventHook` 返回 `void`
-- `ConfigMap` 返回当前配置项，`UpdateMap` 收面板提交的同一批配置项，插件和代理都有
-- `RegisterEventHook` 在 `Load` 之后、`Enable` 之前调用一次，抛异常只记日志，不影响加载
+接口定义（`IBaseComponent` / `IBasePlugin` / `IBaseProxy` / `IProxyInstasnce` / `IBaseLib`）属于进阶内容，见 [api.md](api.md#组件接口)。
 
 ## 生命周期
 
-| 类型 | 生命周期 |
-| --- | --- |
-| 运行库 `Lib` | `Init → Load → Unload`（不调用 Enable / Disable） |
-| 插件 | `Init → Load → RegisterEventHook → Enable → Disable → Unload` |
-| 代理 | `Init → Load → Enable → Disable → Unload` |
-| 实例 | `Init → Load → RegisterEventHook → Enable → Tick(1s) → Disable` |
-| 组件重载配置 | `Disable` → `Reload` → `Enable` |
-| 实例重载配置 | `Disable实例` → `Reload(IProxyInstasnce instasnce)` → `Reload实例` → `Enable实例` |
+```text
+运行库 Lib
+    Init
+     ↓
+    Load
+     ↓
+    Unload
 
-- `Init` 只调用一次，参数是组件配置目录 `Configs/{组件id}`
-- 实例的 `Init(path, uuid)` 收到的是实例目录 `Instances/{uuid}`，配置文件放这里
-- 禁用组件会自动移除它注册的 http 接口
-- 卸载会先卸载依赖它的组件，再卸载整个 `AssemblyLoadContext`，并手动 `Free` 组件加载的 native 库；卸载完成后组件目录可以删除
-- 卸载是运行时行为，重启后仍会重新加载；要彻底移除请用「删除」
-- 重载对插件和代理都有效：本来就未启用时只调用 `Reload`，不做多余的 Disable / Enable；重载实例同理，未启用时只重读配置，不会把它启用起来
-- 面板里保存设置后会自动调用对应的重载接口，也可以单独点「重载」
 
-## 事件
+插件 Plugin / 代理 Proxy
+    Init
+     ↓
+    Load ──▶ 末尾调用 RegisterEventHook（注册 / 订阅只能在这里）
+     ↓
+    Enable ──▶ 运行中
+     ↓
+    Disable
+     ↓
+    Unload
 
-事件只能在上 `RegisterEventHook(IRegister register)` 阶段处理（插件、代理和实例都有这个方法），注册器出了这个阶段就关闭，再调会抛异常。宿主会在 `Load` 之后调一次，组件卸载时按 owner 自动摘掉全部注册。`EventManager` 是宿主内部类，组件拿不到。
 
-`IRegister` 的方法分三类，看名字就能分清：
+代理实例 Instance
+    Init
+     ↓
+    Load
+     ↓
+    RegisterEventHook
+     ↓
+    Enable ──▶ 运行中，每秒 Tick 一次（重连、重试放这里）
+     ↓
+    Disable
+     ↓
+    Unload
 
-| 类别 | 方法 | 说明 |
+
+重载配置
+    组件  Disable ──▶ Reload ──▶ Enable        本来没启用就只调 Reload
+    实例  Disable 实例 ──▶ Reload(实例) ──▶ Reload 实例 ──▶ Enable 实例
+```
+
+- `Init` 只调用一次：插件 / 代理收到 `Configs/{组件id}`，实例收到 `Instances/{uuid}`，配置文件放这里
+- `RegisterEventHook` 在 `Load` 之后、`Enable` 之前调用一次，注册器只在这时可用，抛异常只记日志、不影响加载
+- 启停方法都是同步的 `bool`，返回 `false` 算启用 / 加载失败，不会让进程崩掉
+- 禁用会停掉实例、摘掉这个组件注册的 http 接口、关掉它起的服务器；卸载会先卸载依赖它的组件，再回收 `AssemblyLoadContext`
+- 卸载 / 禁用都是运行时行为，重启后会重新加载；要彻底移除用面板的「删除」
+- `Tick` 每秒一次，只做重连、重试这类轻活，别阻塞
+
+## 组件能用的 API
+
+注册阶段拿到 `IRegister`，能做的事：
+
+| 能力 | API | 用在哪 |
 | --- | --- | --- |
-| 注册：把自己的东西暴露出去 | `RegisterPluginEvent(string eventId)` | 返回 `RaiseHandle`，事件全名 `[组件id]事件id`，别的组件按名字订阅 |
-| | `RegisterHttpPath(Func<HttpContext, Task>)` | 插件 / 代理是 `/api/{组件id}`，实例是 `/api/{组件id}/{实例uuid}` |
-| 订阅：接收别人的事件 | `SubscribeMessage(Func<ProxyMessage, List<BaseMessage>>)` | 代理收到消息后调 `ProxyEventHandle.Dispatch(msg)`，返回值就是要回复的消息 |
-| | `SubscribeMessage(Func<MessageEvent, Task>)` | 长任务版：回调在后台跑，不阻塞代理，处理完 `await e.Reply(msg)` 把消息发回发起方 |
-| | `SubscribeProxy(Action<ProxyEvent>)` | 实例启用 / 停用时广播 `Started` / `Stopped` |
-| | `SubscribePlugin(Action<PluginEvent>)` | 广播订阅：生命周期事件和**所有**自定义事件 |
-| | `SubscribePluginEvent(string name, Action<PluginEvent>)` | 定向订阅：只收这个名字的自定义事件，`name` 是 `[组件id]事件id` |
-| | `SubscribePluginEvent(string componentId, string eventId, Action<PluginEvent>)` | 定向订阅的另一种写法，用 id 拼名字；两个 id 都可以写 `*` 通配 |
-| | `SubscribeSendFilter(Func<ProxyMessage, BaseMessage, Task<bool>>)` | 发送前拦截：消息发到真实平台之前调用，返回 `true` 取消这次发送，插件用来屏蔽消息 |
-| 句柄：注册后随时用 | `RegisterState(string name)` | 返回 `StateHandle`，`Set(value)` 更新、`Remove()` 删掉，面板上显示成标签 |
-| | `RegisterProxyEvent()` | 返回 `ProxyEventHandle`，代理把收到的消息 `Dispatch(msg)` 注入进来，自动分发给所有订阅消息事件的组件并收集回复；**只有代理 / 实例能调用** |
-| | `RegisterSend()` | 返回 `SendHandle`，插件用它给指定实例发消息；代理 / 实例拿到的句柄填自己的代理 id 会直接抛异常 |
+| 自定义事件 | `RegisterPluginEvent(eventId)` → `RaiseHandle` | 插件、代理、实例都能发，别的组件按 `[组件id]事件id` 订阅 |
+| 收消息 | `SubscribeMessage(Func<ProxyMessage, List<BaseMessage>>)` / `SubscribeMessage(Func<MessageEvent, Task>)` | 插件处理消息，代理转发消息 |
+| 发消息 / 拦截 | `RegisterSend()` → `SendHandle.SendAsync`、`SubscribeSendFilter(...)` | 主动发消息、屏蔽某条消息 |
+| 注入消息 | `RegisterProxyEvent()` → `ProxyEventHandle.Dispatch` | **只有代理 / 实例**能拿 |
+| 状态 | `RegisterState(name, label, description)` / `RegisterKvState(...)` | 面板上显示运行时数据 |
+| http 接口 | `RegisterHttpPath(Func<HttpContext, Task>)` | `/api/{组件id}`，实例是 `/api/{组件id}/{uuid}` |
+
+不在注册阶段也能用的：
+
+| 能力 | API |
+| --- | --- |
+| 配置项 | `ConfigMap()` 声明、`UpdateMap()` 接收，面板生成表单 |
+| 宿主管理 | `ComponentApi.GetComponents()` / `GetInstances()` / `StartComponent` / `EnableInstance` … |
+| 自建服务器 | `ComponentApi.StartServer(owner, ServerOptions, configure)`，组件结束时自动关闭 |
+| 证书 | `CertStore.Names()` / `CertStore.List()` |
 
 ```csharp
 public void RegisterEventHook(IRegister register)
 {
-    register.SubscribeMessage(msg => msg.Message is TextMessage text
-        ? [new TextMessage("收到：" + text.Text)]
-        : []);
-
-    // 长任务版：慢活放后台，做完自己发回去，代理不会等着
-    register.SubscribeMessage(async e =>
-    {
-        await Task.Delay(3000);
-
-        await e.Reply(new TextMessage("算完了"));
-    });
-
-    // 注册自定义事件，全名 [demo]ping，拿着句柄随时触发
-    _ping = register.RegisterPluginEvent("ping");
-
-    // 定向订阅：只收 [demo]ping，直接用注册时拿到的全名，不用写死字符串
-    register.SubscribePluginEvent(_ping.Name, e =>
-    {
-        // 只有 [demo]ping 会进来
-    });
-
-    // 等价写法，跨组件订阅时知道对方的 id 和事件 id 就行
-    register.SubscribePluginEvent("demo", "ping", e =>
-    {
-    });
-
-    // 通配：所有组件的 ping / demo 的所有事件 / 所有自定义事件
-    register.SubscribePluginEvent("*", "ping", e => { });
-    register.SubscribePluginEvent("demo", "*", e => { });
-    register.SubscribePluginEvent("*", "*", e => { });
-
-    // 广播订阅：生命周期事件和所有自定义事件都会进来
-    register.SubscribePlugin(e =>
-    {
-    });
-
-    // 发送前拦截：返回 true 这条消息就不会发到平台
-    register.SubscribeSendFilter((context, message) =>
-    {
-        return Task.FromResult(message is TextMessage text && text.Text.Contains("敏感词"));
-    });
-
-    // 状态句柄，之后随时更新
-    _replies = register.RegisterState("replies");
-
-    // 收到消息后交给插件；要给某个实例发消息用 _send.SendAsync(...)
-    _dispatch = register.RegisterProxyEvent();
-    _send = register.RegisterSend();
+    register.SubscribeMessage(msg => ...);                    // 收消息
+    _ping = register.RegisterPluginEvent("ping");               // 自定义事件
+    _replies = register.RegisterState("replies", "回复条数", "累计回复条数");
+    register.RegisterHttpPath(HandleAsync);                     // /api/{组件id}
+    _send = register.RegisterSend();                            // 主动发消息
 }
-
-// 任意时刻，事件数据只能是基础类型、JsonNode 或 BaseMessage
-_ping.Raise("demo");
-_ping.Raise(42);
-_ping.Raise(new JsonObject { ["value"] = 1 });
-_ping.Raise(new TextMessage("带一条消息"));
 ```
 
-- 两种订阅可以同时挂，互不影响：广播订阅连自定义事件一起收，定向订阅只收匹配的自定义事件、收不到生命周期事件
-- 定向订阅的两个 id 支持 `*`：`("demo", "*")` 收 demo 的全部事件，`("*", "ping")` 收所有组件的 ping，`("*", "*")` 等于只收全部自定义事件
-- 事件数据只能是**基础类型**（`string` / `bool` / `int` / `long` / `double`）、`JsonNode` 或 `BaseMessage`，`RaiseHandle` 对这些各有一个重载，没数据直接 `Raise()`；组件自定义的类型编译期就传不进来
-- 原因：每个组件在自己的 `AssemblyLoadContext` 里，传自定义对象会把它的类型和程序集带进别的组件，订阅方只要还拿着这个对象，卸载时就回收不掉
-- 订阅方从 `PluginEvent.Data`（`JsonNode?`）取值或者 `Deserialize` 成自己的类型，结构化数据拼 `JsonObject` / `JsonArray`；带消息的事件看 `PluginEvent.Message`（`BaseMessage?`），两者二选一
-- 事件名可以用 `PluginEventName.Build(组件id, 事件id)` 拼，`PluginEventName.TryParse(name, out var id, out var eventId)` 拆；名字必须是 `[组件id]事件id`，否则订阅时直接抛 `ArgumentException`
-- 同一个 owner 重复订阅同一个回调只算一次
-- 多个插件都返回消息时按注册顺序拼起来，由调 `ProxyEventHandle.Dispatch` 的代理负责发送
-- `RegisterProxyEvent` 只给代理 / 实例用：插件注册直接抛 `组件 {0} 不是代理，不能注册代理事件`
-- 回复也走同一条发送链路：代理发回复前先过所有拦截器，任何一个返回 `true` 就不发；拦截器抛异常只记日志，不影响发送
-- 拦截器全部放行后，宿主按 `context.Uuid` 找到目标实例，直接调它的 `IProxyInstasnce.SendAsync(message, reply)`，代理不需要注册发送回调
-- 长任务版的消息回调是后台跑的，`MessageEvent.Reply` 用的是原始 `ProxyMessage` 的 `Id` / `Uuid`，所以任务结束后回复照样发给发起这次分发的那个实例，也能被其他插件拦截
-- 某个回调抛异常只记日志，不影响其他回调
-- `ProxyMessage` 带 `Id`（代理 id）、`Uuid`（实例）、`SenderType` / `Sender` / `Target` 和消息内容，被动回复要用的 `ReplyId` / `ReplyEventId` 也在这里
-- 实例要收别的代理的消息，也是订阅消息事件，回调里用自己的传输发
+细节、参数和注意事项都在 [api.md](api.md)：事件与句柄、状态、配置、`ComponentApi`、http 和证书。
 
-## 通用消息
+## 文档索引
 
-各平台都有的消息是 `BaseMessage` 的子类型，代理各自映射到自己的格式：
-
-| 类型 | QQ | OneBot 11 | KOOK |
-| --- | --- | --- | --- |
-| `TextMessage` | `msg_type: 0` | `text` 段 | `type: 1` |
-| `ImageUrlMessage` / `ImageFileMessage` | 先上传换 `file_info` | `image` 段 | `type: 2` |
-| `MentionMessage` | 目前走直通 | `at` 段 | KMarkdown `(met)` |
-| `FaceMessage` | 目前走直通 | `face` / `mface` 段 | KMarkdown `(emj)` |
-| `RecordMessage` | 需要上传 | `record` 段 | `type: 8` |
-| `VideoMessage` | 需要上传 | `video` 段 | `type: 3` |
-| `CardMessage` | 目前走直通 | `json` / `xml` 段 | `type: 10` |
-| `MarkdownMessage` | `msg_type: 2` | `markdown` 段 | `type: 9` |
-| `ReplyMessage` | `message_reference` | `reply` 段 | 引用回复 |
-
-每个消息类型一个文件，在 `Core/PlugBotSharp.Core/Messages` 下；`ListMessage` 用来把多条合成一条发送，代理会按自己的限制拆开。
-
-## 平台独有消息
-
-要发平台独有的结构（QQ 的内嵌键盘、图文卡片、ark），用 `RawMessage` 把 payload 原样交给代理：
-
-```csharp
-// 插件里，引用 qqlib 是为了少写 JSON
-var obj = new SendGroupMessageObj
-{
-    MsgType = 2,
-    Markdown = new MessageMarkdownObj { Content = "**hi**" }
-};
-
-return [new RawMessage(QQMessage.SendName, JsonSerializer.SerializeToNode(obj, QQJsonContext.Default.SendGroupMessageObj)!)];
-```
-
-- `RawMessage.Name` 是约定，QQ 代理认 `qq.send`，OneBot 代理认 `onebot11.segment`，转不过来的直接丢弃
-- payload 用 `JsonNode` 而不是强类型对象：万一某个组件把 `QQLib.dll` 私自打进了自己的包，也只是多一次序列化，不会因为类型标识不同炸掉
-- 接收方向仍然是 `BaseMessage`，插件不需要懂平台字段
-
-`DemoPlugin` 里每个命令对应一种消息体，可以直接当模板抄：
-
-| 命令 | 发出的消息 |
+| 文档 | 内容 |
 | --- | --- |
-| `/text` | `TextMessage`，内容可以在面板的设置里改 |
-| `/markdown` | `MarkdownMessage`，QQ 侧转成 `msg_type: 2`，OneBot 侧转成 `markdown` 段 |
-| `/keyboard` | markdown + 内嵌键盘（指令按钮 + 跳转按钮） |
-| `/card` | `msg_type: 3` 图文卡片 |
-| `/list` | `ListMessage`，代理会拆成多条发送 |
-| `/reply` | `ListMessage(ReplyMessage, TextMessage)`，引用收到的消息回复 |
-
-## QQ 代理
-
-- 收到 `GROUP_AT_MESSAGE_CREATE` / `GROUP_MESSAGE_CREATE`（群）和 `C2C_MESSAGE_CREATE`（单聊）时转成消息事件，其他事件只记日志
-- 群消息的 `ProxyMessage`：`SenderType = Group`、`Sender = member_openid`、`Target = group_openid`、`ReplyId = 平台消息 id`；单聊的 `Target` 为空，回复时用 `Sender`
-- 内容里的 `<@!id>` / `<qqbot-at-user .../>` 会被去掉，附件按 `content_type` 转成 `ImageUrlMessage` 或 `FileUrlMessage`，有文字时合成 `ListMessage`
-- 回复走被动回复：带 `msg_id`（`ReplyId`）和按消息 id 自增的 `msg_seq`，群里发到 `v2/groups/{group_openid}/messages`，单聊发到 `v2/users/{openid}/messages`
-- `HookType` 三种模式：`WebHook` 注册到宿主（`/api/qqproxy/{实例uuid}`）；`WebHost` 自己起 Kestrel，监听实例配置里的 `Port`；`WebSocket` 还没实现
-
-## OneBot 代理
-
-实例配置拆成四个开关：`Transport`（`WebSocket` / `Http`）、`Role`（`Client` / `Server`）、`Receive`（收不收事件）、`Send`（发不发消息）。
-
-| Transport | Role | 收事件 | 发消息 |
-| --- | --- | --- | --- |
-| `WebSocket` | `Client` | 我们连 `Url`（例如 `ws://127.0.0.1:3001`）的 socket | 同一条 socket |
-| `WebSocket` | `Server` | 机器人连我们的 `Host:Port` 的 `/ws` | `Url` 上的 HTTP API |
-| `Http` | `Server` | 机器人 POST 到 `Host:Port` 的 `/` | `Url` 上的 HTTP API |
-| `Http` | `Client` | 收不到（正向 HTTP 只有接口，没有事件） | `Url` 上的 HTTP API |
-
-- `Receive` / `Send` 再各管一半：关掉 `Send` 就是只收，关掉 `Receive` 就是只发；两个都关或者服务端模式关掉 `Receive`，`Enable` 直接失败
-- 服务端模式（`Role = Server`）用 `Token` 校验 `Authorization: Bearer`；客户端 WebSocket 模式断线由 `Tick` 按 `ReconnectSeconds` 重连
-- OneBot 专属的段（音乐、位置、名片、戳一戳、骰子、猜拳、抖动、合并转发、分享）用 `OneBotSegment` 拼，再包成直通消息：
-
-```csharp
-return [OneBotSegment.Raw(OneBotSegment.Music("qq", "123456"))];
-```
-
-### 协议版本
-
-实例配置里的 `Protocol` 选 `V11` / `V12`，两版的段结构一样，只有事件字段和 action 不同：
-
-| | V11 | V12 |
-| --- | --- | --- |
-| 事件类型 | `post_type` + `message_type` | `type` + `detail_type` |
-| 消息体 | `message` 段数组或 CQ 字符串 | `message` 段数组 |
-| ID | 数字（`user_id` / `group_id`） | 字符串 |
-| 发送 action | `send_group_msg` / `send_private_msg` | `send_message` + `detail_type` |
-| @ 段 | `at`（`qq=all` 是全体） | `mention` / `mention_all` |
-| 事件标记 | 带 `post_type` 就算事件 | 带 `type` 和 `self` 才算事件 |
-
-- 接收：`OneBotEvent.Parse(..., version)` 按版本解析，两边都转成同一个 `ProxyMessage`
-- 发送：`OneBotAction.SendMessage(version, group, target, segments)` 组 action 和参数，v12 的 id 原样传字符串
-- 消息段：`OneBotMessage.ToSegments(message, version)` / `FromSegments(json, out replyId, version)`，`MentionMessage` 在 v12 会转成 `mention` / `mention_all`
-
-## 起 http / websocket 服务器
-
-组件要自己监听端口时不要 new `WebApplication`，交给宿主托管，组件或实例结束时宿主会自动关掉：
-
-```csharp
-private ComponentServer? _server;
-
-public bool Start(ushort port)
-{
-    _server ??= ComponentApi.StartServer(this, new ServerOptions
-    {
-        Host = "127.0.0.1",
-        Port = port,
-        Certificate = "panel",      // Certs 里的证书名，也能填 pfx 路径，为空走 http
-        WebSocket = true            // 需要 WebSocket 时置为 true，宿主会 UseWebSockets()
-    }, app =>
-    {
-        app.MapPost("/", HandlePost);
-        app.Map("/ws", HandleSocket);
-    });
-
-    return _server.Start();
-}
-```
-
-- `StartServer` 把服务器登记在 `owner`（插件 / 代理 / 实例对象）名下，宿主负责建 Kestrel、解析证书（同样走 `CertStore`）
-- 组件禁用 / 卸载、实例禁用 / 删除时，宿主调用 `ServerRegistry.StopAll(owner)` 关掉它名下的全部服务器，组件不用自己收尾
-- `ComponentServer.Start()` 同步执行，成功返回 `true`；`Stop()` 可以重复调用
-- QQ 代理的 `WebHost` 模式、OneBot 代理的反向服务端都改成了这套，组件里不再出现 `WebApplication`
-
-### 选证书
-
-`ServerOptions.Certificate` 填 `Certs` 目录里的证书名即可，密码自动按 `Certs.json `或密码文件（`panel.txt` / `password.txt` 这类）解析：
-
-```csharp
-new ServerOptions
-{
-    Host = "127.0.0.1",
-    Port = 3002,
-    Certificate = "panel",   // Certs 里的证书名，密码自动找
-    WebSocket = true
-}
-```
-
-- 名字找不到时会把 `Certificate` 当成本地 pfx 路径，这时密码用同一条配置里的 `CertificatePassword`
-- 名字或路径都解析不到时 `Start()` 返回 `false` 并记一条「找不到证书」日志，不会静默退回 http
-- 证书本身要带 Server Authentication 用途（IIS 导出的证书默认就带），否则 Kestrel 会拒绝启动
-- 想知道有哪些证书可用：`CertStore.Names()` 拿名字列表，`CertStore.List()` 拿带路径和密码的完整信息
-
-## GsCore 代理
-
-`gsuid_core`（SayuCore）把原神功能跑在独立进程里，`PlugBotSharp.GsCoreProxy`（组件 id `gscoreproxy`）和 core 双向收发：
-
-```
-QQ / OneBot 实例 ──消息事件──▶ GsCore 代理 ──MessageReceive──▶ gsuid_core
-                                GsCore 代理 ◀──MessageReceive── gsuid_core
-```
-
-- 连的是 `{Url}/ws/{BotId}`，有 `Token` 就带上 `?token=`；断线由 `Tick` 按 `ReconnectSeconds` 重连
-- 发：在 `RegisterEventHook()` 里订阅所有平台的消息事件，转成 `MessageReceive`（文本、@、图片、语音、视频、markdown、引用），按 `group/direct` 填 `user_type`
-- 收：core 下发的报文按 `GsMessageReceive` 解析，`content` 的段还原成统一消息（`text` / `at` / `image` / `record` / `video` / `file` / `markdown` / `reply_id` / `json` / `xml`，认不出的段包成 `RawMessage("genshin.segment")`），再拼成 `ProxyMessage`：`user_type` 决定 `SenderType`（group / channel / 其余当私聊），`Sender` 用 `user_id`，`Target` 用 `group_id`，`ReplyId` 用 `msg_id`
-- 消息段：媒体用 `link://` 或 `base64://`，base64 图片读进内存，语音 / 视频 / 文件落临时文件
-- 收到就注入：`GenshinInstance.OnReceived` 把 core 的消息转成 `ProxyMessage` 后用 `RegisterProxyEvent()` 的句柄 `Dispatch` 出去，所有订阅消息事件的插件都会收到，收到的条数记在实例状态 `recv` 上
-- 回复回 core：插件返回的消息走 `_send.SendAsync` → 拦截器 → 实例的发送实现 → `MessageReceive` 发回 core，和 QQ / OneBot 的回复是同一条链路
-- 回环保护：`Forward` 只转发别的代理的消息，自己 `Dispatch` 出去的消息不会再转一遍
-
-| 配置 | 说明 |
-| --- | --- |
-| `Url` | gsuid_core 地址，例如 `ws://127.0.0.1:8765` |
-| `BotId` | 连接用的 bot_id，core 靠它区分适配器 |
-| `Token` | core 配置的 ws token，密码框 |
-| `ReconnectSeconds` | 断线重连间隔 |
-
-组件级还有 `LogMessage`，打开后把发出去的报文写进调试日志。
-
-## 组件里注册 http 接口
-
-回调是 `Func<HttpContext, Task>`，宿主会 `await` 它：
-
-```csharp
-// 只能在 RegisterEventHook 阶段注册
-register.RegisterHttpPath(HandleAsync);    // 插件 / 代理是 /api/{组件id}，实例是 /api/{组件id}/{实例uuid}
-
-static async Task HandleAsync(HttpContext ctx)
-{
-    ctx.Response.ContentType = "application/json";
-    await ctx.Response.WriteAsync("""{"ok":true}""");
-}
-
-ComponentApi.UnregisterHttpPath(plugin);
-ComponentApi.UnregisterHttpPath(proxy);
-ComponentApi.UnregisterHttpPath(instance);
-```
-
-- 路径由组件 id（实例再加 uuid）决定，同一个路径重复注册会覆盖
-- 回调里的异常由宿主捕获，记日志并返回 500（响应已经开始时只记日志）
-- `UnregisterHttpPath` 返回是否真的移除了注册；只有注册者一致才移除，重复调用返回 `false`，组件已经卸载也能调用
-- 禁用或卸载时对应接口会自动移除，手动取消注册用来提前关掉接口
-
-## 自定义状态
-
-组件可以把运行时状态上报给面板，组件列表 / 实例列表里会显示成小标签：
-
-```csharp
-// 注册阶段拿句柄，之后随时更新
-_replies = register.RegisterState("replies");
-_replies.Set(count.ToString());
-```
-
-- 状态按组件对象存（插件 / 代理 / 实例各一份），同名覆盖，值统一用字符串
-- 句柄一直留着用，注册阶段结束后照样能 `Set` / `Remove`；再调 `RegisterState` 才会抛异常
-- 面板接口 `GET /api/admin/components` 和 `GET /api/admin/instances` 的 `states` 字段就是这些键值
-- 组件卸载、实例删除时宿主会清掉它上报的状态
-- `DemoPlugin` 用回复计数做了示例：每回一条就更新 `replies`
-
-## 组件和实例的设置
-
-组件（`IBaseComponent`，插件和代理都行）和实例（`IProxyInstasnce`）都可以把配置项声明出来，面板照着生成表单，保存时再回调组件：
-
-```csharp
-public Dictionary<string, ConfigMap> ConfigMap() => new()
-{
-    ["Port"] = new ConfigIntMap { Key = "Port", Value = 10000, Min = 1, Max = 65535, Default = 10000 },
-    ["AppSecret"] = new ConfigStringMap { Key = "AppSecret", Value = "", Secret = true },
-};
-
-public void UpdateMap(Dictionary<string, ConfigMap> data)
-{
-    // data 里是面板提交上来的同一批配置项，取 Value 自己落盘
-}
-```
-
-| `type` | 记录 | 面板控件 |
-| --- | --- | --- |
-| `int` | `ConfigIntMap` | 数字框，带 `Min` / `Max` |
-| `float` | `ConfigFloatMap` | 小数框，带 `Min` / `Max` |
-| `bool` | `ConfigBoolMap` | 开关 |
-| `string` | `ConfigStringMap` | 文本框，`Secret` 时是密码框，`MaxLength` 限长 |
-| `list` | `ConfigListMap` | 多行文本，一行一项，`MaxCount` 限项数 |
-| `kv` | `ConfigKvMap` | 键值对，可增删行 |
-| `enum` | `ConfigEnumMap` | 下拉框，选项来自 `Options` |
-
-- `Key` 是配置名，也是面板上显示的字段名；`Value` 是当前值，`Default` 用来点「默认值」
-- `Description` 是给用户看的解释，面板上显示在输入框上方；`Placeholder` 是输入框的占位符
-- 面板接口是 `GET/POST /api/admin/components/{id}/config` 和 `GET/POST /api/admin/instances/{uuid}/config`
-- 保存后可以调 `POST .../reload` 让配置立刻生效，面板会自动调
-- 序列化用独立的 `ConfigMapContext`，字段是 camelCase，多态判别字段是 `type`
-
-## 证书 / HTTPS
-
-所有自己起的 http / websocket 服务器共用宿主的 `Certs` 目录，密码不用手填：
-
-```
-Certs/
-  panel.pfx
-  panel.txt                    密码文件，一行密码
-  cert.zip                     也可以直接丢压缩包
-  Certs.json                   可选，用来起别名或者固定密码
-```
-
-- **压缩包**：`Certs` 下的 `.zip` 会自动解到同名子目录，里面一般是 pfx + 密码文件
-- **密码自动识别**：先找同目录的 `<pfx名>.txt` / `<pfx名>.password`，再找 `password.txt` / `pwd.txt` / `密码.txt` / `cert.txt`，取第一行非空内容
-- **清单**：`Certs.json` 可以给证书起别名、固定密码；密码留空就按上面的规则自动找
-- **选择证书**：实例设置里是下拉框，选项来自 `Certs` 目录，空表示不用；也兼容直接填 pfx 路径
-
-```json
-{
-  "Items": [
-    { "Name": "panel", "File": "panel.pfx" }
-  ]
-}
-```
-
-| 位置 | 配置项 | 说明 |
-| --- | --- | --- |
-| 管理面板 | `Config.json` 的 `Certificate` | 面板地址变成 `https://127.0.0.1:{Port}` |
-| QQ 代理 | 实例配置的 `Certificate` | 只对 `HookType = WebHost` 生效 |
-| OneBot 代理 | 实例配置的 `Certificate` | 只对 `Role = Server` 生效，WebSocket 一起变成 wss |
-
-证书名找不到或者文件不存在，服务器启动失败并记日志，不会静默退回 http。
-
-面板接口 `GET /api/admin/certs` 只返回名字和文件名，不会返回密码。
-
-## HTTP 接口
-
-| 路径 | 说明 |
-| --- | --- |
-| `GET /api/auth/state` | 是否已初始化、是否已登录（公开） |
-| `POST /api/auth/init` | 创建初始账户，只能成功一次（公开） |
-| `POST /api/auth/login` / `logout` | 登录 / 退出 |
-| `GET /api/status` | 基础状态（公开） |
-| `/api/admin/**` | 面板接口，需要登录 |
-| `GET/POST /api/admin/components/{id}/config` | 组件设置项，读 `ConfigMap`、写 `UpdateMap` |
-| `POST /api/admin/components/{id}/reload` | 重载组件配置 |
-| `GET/POST /api/admin/instances/{uuid}/config` | 实例设置项，同上 |
-| `POST /api/admin/instances/{uuid}/reload` | 重载实例配置 |
-| `/api/{组件id}` | 组件自己注册的接口（公开） |
-
-响应统一为 `{ "ok": bool, "message": string, "data": any }`。
-
-## 开发
-
-```bash
-dotnet build PlugBotSharp.slnx
-dotnet test PlugBotSharp.Tests
-```
-
-构建完 `PlugBotSharp.Run/bin/Debug/net10.0` 就是一个**完整的运行目录**：宿主 dll 在根上，七个组件已经解压到 `Components/{组件id}`，直接双击 `PlugBotSharp.Run.exe` 就能跑（`Run` 工程的 `DeployComponents` 目标负责解压，组件只参与构建、不进引用）。
-
-这个目录同时就是运行目录，`Nugets`、`Configs`（面板账户、组件配置）、`Instances`、`Config.json`、`Logs` 都是运行时数据。构建只覆盖解压 `Components/{组件id}`，不删这些目录，所以重新构建、重启都不会丢账户，也不会重新下载 NuGet 包。
-
-前端：
-
-测试里不允许依赖真实程序集，组件用 `PlugBotSharp.Tests` 里的假实现；测试之间会清空事件注册和组件字典，不要假设顺序。
-
-## 已知限制
-
-- NuGet 只解析组件直接声明的包，不解析传递依赖；需要 native 库时请在 `Deps` 里显式列出
-- 卸载组件时手动 `Free` native 库，前提是组件自己的线程已经停止
-- 登录防爆破状态是内存态，进程重启后计数清零
-- OneBot 反向 WS 模式目前只能收事件，发送仍走 HTTP API
+| [plugin.md](plugin.md) | 写插件：生命周期、订阅消息、通用消息、平台消息、DemoPlugin |
+| [proxy.md](proxy.md) | 写代理：代理和实例、`ProxyMessage`、分发与回复、ProxyDemo、现有代理说明 |
+| [lib.md](lib.md) | 写运行库：DemoLib、QQLib / OneBotLib |
+| [package.md](package.md) | 组件清单 `Meta.json`、依赖、NuGet、打包和安装 |
+| [api.md](api.md) | 进阶：组件接口、注册器和句柄、事件、状态、配置、ComponentApi、http 接口、证书 |
+| [runtime.md](runtime.md) | 工程结构、构建、运行目录、启停与重载、面板 HTTP 接口、日志、已知限制 |

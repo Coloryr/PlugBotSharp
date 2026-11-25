@@ -21,7 +21,8 @@ public class GenshinInstanceTests
 
             var map = instance.ConfigMap();
 
-            Assert.Equal(new[] { "Url", "BotId", "Token", "ReconnectSeconds" }, map.Keys.ToArray());
+            Assert.Equal(new[] { "Url", "BotId", "Token", "ReconnectSeconds", "CommandStart" }, map.Keys.ToArray());
+            Assert.Equal(["/"], ((ConfigListMap)map["CommandStart"]).Value);
             Assert.Equal("ws://127.0.0.1:8765", ((ConfigStringMap)map["Url"]).Value);
             Assert.Equal("PlugBotSharp", ((ConfigStringMap)map["BotId"]).Value);
             Assert.True(((ConfigStringMap)map["Token"]).Secret);

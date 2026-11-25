@@ -30,6 +30,12 @@ public enum ProxyLangKey
     CallbackEvent,
     CallbackResponse,
     CallbackSignatureFail,
+    EventParseError,
+    ApiError,
+    PassiveLimit,
+    ActiveFail,
+    SendBlocked,
+    ActiveQuota,
     SendFail,
     SendError,
     NotReady,
@@ -106,6 +112,18 @@ public static class ProxyLang
                 return "回调响应 {0}";
             case ProxyLangKey.CallbackSignatureFail:
                 return "回调签名校验失败，事件已丢弃";
+            case ProxyLangKey.EventParseError:
+                return "事件解析失败 {0} {1}";
+            case ProxyLangKey.ApiError:
+                return "请求 {0} 失败 {1} {2}";
+            case ProxyLangKey.PassiveLimit:
+                return "被动回复次数用完 {0}，改成主动发送";
+            case ProxyLangKey.ActiveFail:
+                return "主动发送失败 {0} {1}，后续消息不再发送";
+            case ProxyLangKey.SendBlocked:
+                return "消息已停止发送 {0}";
+            case ProxyLangKey.ActiveQuota:
+                return "群 {0} 今日主动消息已达 {1} 条上限，不再发送";
             case ProxyLangKey.SendFail:
                 return "发送消息失败 {0}";
             case ProxyLangKey.SendError:
@@ -179,6 +197,18 @@ public static class ProxyLang
                 return "Callback response {0}";
             case ProxyLangKey.CallbackSignatureFail:
                 return "Callback signature verification failed, event dropped";
+            case ProxyLangKey.EventParseError:
+                return "Event parse failed {0} {1}";
+            case ProxyLangKey.ApiError:
+                return "Request {0} failed {1} {2}";
+            case ProxyLangKey.PassiveLimit:
+                return "Passive reply limit reached {0}, sending actively";
+            case ProxyLangKey.ActiveFail:
+                return "Active send failed {0} {1}, further messages are dropped";
+            case ProxyLangKey.SendBlocked:
+                return "Message sending stopped {0}";
+            case ProxyLangKey.ActiveQuota:
+                return "Group {0} reached the daily active message limit {1}";
             case ProxyLangKey.SendFail:
                 return "Send message failed {0}";
             case ProxyLangKey.SendError:

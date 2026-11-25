@@ -78,9 +78,9 @@ public class ProxyInstance : IProxyInstasnce
     private const int ReplySeqLimit = 256;
 
     /// <summary>
-    /// 回复序号保留多久（分钟），被动回复窗口是 5 分钟
+    /// 回复序号保留多久（分钟），被动回复窗口是 60 分钟
     /// </summary>
-    private const int ReplySeqLifetime = 10;
+    private const int ReplySeqLifetime = 60;
 
     /// <summary>
     /// 回复序号的记录，用来定期清理过期的被动回复窗口
@@ -88,6 +88,36 @@ public class ProxyInstance : IProxyInstasnce
     /// <param name="Seq">当前序号</param>
     /// <param name="Created">第一次回复的时间</param>
     private sealed record ReplySeq(int Seq, DateTime Created);
+
+    /// <summary>
+    /// 被动回复最多 5 条，到 5 之后不再带 msg_id
+    /// </summary>
+    private const int PassiveLimit = 5;
+
+    /// <summary>
+    /// 每条消息的回复状态：已经转主动 / 停止发送
+    /// </summary>
+    private sealed class ReplyState
+    {
+        public bool Active;
+        public bool Blocked;
+        public DateTime Last = DateTime.Now;
+    }
+
+    /// <summary>
+    /// 消息 id 到回复状态的映射
+    /// </summary>
+    private readonly ConcurrentDictionary<string, ReplyState> _replyStates = new();
+
+    /// <summary>
+    /// 每个群每天主动消息的配额
+    /// </summary>
+    private ActiveQuota? _quota;
+
+    /// <summary>
+    /// 主动消息配额的状态句柄，面板上显示成 群 -> 已发条数
+    /// </summary>
+    private StateKvHandle? _quotaState;
 
     /// <summary>
     /// 创建实例
@@ -117,6 +147,7 @@ public class ProxyInstance : IProxyInstasnce
     public void Init(string path, Guid uuid)
     {
         _configFile = Path.Combine(path, "config.json");
+        _quota = new ActiveQuota(path);
         _uuid = uuid;
         Logger = LogManager.GetLogger($"QQBot[{uuid.ToString()[0..8]}]");
         Logger.Info(ProxyLang.GetLang(ProxyLangKey.InstanceInit));
@@ -150,6 +181,10 @@ public class ProxyInstance : IProxyInstasnce
 
         // WebHook 模式把回调挂到宿主上，WebHost 模式自己监听端口
         register.RegisterHttpPath(HandleCallback);
+
+        // 每天各群已发的主动消息条数，面板上是只读键值状态
+        _quotaState = register.RegisterKvState("quota", "主动配额", "今天各群已经发出去的主动消息条数，每群每天上限 1000 条");
+        PublishQuota();
     }
 
     /// <summary>
@@ -254,22 +289,203 @@ public class ProxyInstance : IProxyInstasnce
             return;
         }
 
+        // 一条 QQ 消息只能有一个 msg_type，列表逐条发，每条都要有自己的 msg_seq
+        if (reply is ListMessage list)
+        {
+            foreach (var item in list.Messages)
+            {
+                if (item is ReplyMessage)
+                {
+                    continue;
+                }
+
+                await SendAsync(message, item);
+            }
+
+            return;
+        }
+
         var scene = message.SenderType == MessageSenderType.User ? MessageScene.User : MessageScene.Group;
         var target = string.IsNullOrEmpty(message.Target) ? message.Sender : message.Target;
-        var sequence = NextSeq(message.ReplyId);
+        var replyId = message.ReplyId;
+        var state = string.IsNullOrEmpty(replyId) ? null : _replyStates.GetOrAdd(replyId, _ => new ReplyState());
+
+        if (state is { Blocked: true })
+        {
+            Logger.Debug(ProxyLang.GetLang(ProxyLangKey.SendBlocked, target));
+
+            return;
+        }
+
+        if (state is not null)
+        {
+            state.Last = DateTime.Now;
+            PruneReplyState();
+        }
+
+        var sequence = NextSeq(replyId);
+
+        // 被动回复有条数上限，平台是 5 条，配置里可以调小
+        var passive = state is not { Active: true } && sequence <= Math.Clamp(_data.PassiveLimit, 1, 50);
+
+        // 主动消息每个群每天有 1000 条上限，超了就别再打接口了
+        if (!passive && !CanSendActive(target))
+        {
+            if (state is not null)
+            {
+                state.Blocked = true;
+            }
+
+            Logger.Warn(ProxyLang.GetLang(ProxyLangKey.ActiveQuota, target, ActiveQuota.Limit));
+
+            return;
+        }
+
+        Logger.Debug($"发送 {target} seq={sequence} {(passive ? "被动" : "主动")} {reply.Type}");
 
         try
         {
-            var res = await _proxy.Send(target, scene, reply, message.ReplyId, sequence);
+            var result = await _proxy.Send(target, scene, reply, passive ? replyId : null, sequence);
 
-            if (res is null)
+            if (result.Ok)
             {
-                Logger.Warn(ProxyLang.GetLang(ProxyLangKey.SendFail, target));
+                if (!passive)
+                {
+                    if (state is not null)
+                    {
+                        state.Active = true;
+                    }
+
+                    _quota?.Add(target);
+                    PublishQuota();
+                }
+
+                return;
             }
+
+            // 被动回复失败，且是次数 / 时间用完
+            if (passive && result.Code == QQApi.PassiveLimitCode)
+            {
+                Logger.Warn(ProxyLang.GetLang(ProxyLangKey.PassiveLimit, target));
+
+                if (!_data.ActiveFallback)
+                {
+                    if (state is not null)
+                    {
+                        state.Blocked = true;
+                    }
+
+                    return;
+                }
+
+                if (state is not null)
+                {
+                    state.Active = true;
+                }
+
+                // 这一条改主动重发一次，同样受每日配额限制
+                if (!CanSendActive(target))
+                {
+                    if (state is not null)
+                    {
+                        state.Blocked = true;
+                    }
+
+                    Logger.Warn(ProxyLang.GetLang(ProxyLangKey.ActiveQuota, target, ActiveQuota.Limit));
+
+                    return;
+                }
+
+                var retry = await _proxy.Send(target, scene, reply, null, sequence);
+
+                if (retry.Ok)
+                {
+                    _quota?.Add(target);
+                    PublishQuota();
+
+                    return;
+                }
+
+                if (state is not null)
+                {
+                    state.Blocked = true;
+                }
+
+                Logger.Warn(ProxyLang.GetLang(ProxyLangKey.ActiveFail, target, retry.Code));
+
+                return;
+            }
+
+            // 主动发送也失败：没权限 / 没配额，后续不再发
+            if (!passive)
+            {
+                if (state is not null)
+                {
+                    state.Blocked = true;
+                }
+
+                Logger.Warn(ProxyLang.GetLang(ProxyLangKey.ActiveFail, target, result.Code));
+
+                return;
+            }
+
+            Logger.Warn(ProxyLang.GetLang(ProxyLangKey.SendFail, target));
+        }
+        catch (NotSupportedException)
+        {
+            Logger.Debug(ProxyLang.GetLang(ProxyLangKey.SendFail, target));
         }
         catch (Exception e)
         {
             Logger.Error(e, ProxyLang.GetLang(ProxyLangKey.SendError, target));
+        }
+    }
+
+    /// <summary>
+    /// 把各群今天已发的主动消息条数同步到状态，面板上直接看
+    /// </summary>
+    private void PublishQuota()
+    {
+        if (_quotaState is null || _quota is null)
+        {
+            return;
+        }
+
+        _quotaState.Clear();
+
+        foreach (var (group, count) in _quota.Snapshot())
+        {
+            _quotaState.Set(group, count);
+        }
+    }
+
+    /// <summary>
+    /// 今天这个群还能不能发主动消息
+    /// </summary>
+    /// <param name="group">群 openid</param>
+    private bool CanSendActive(string group)
+    {
+        return string.IsNullOrEmpty(group) || _quota?.CanSend(group) != false;
+    }
+
+    /// <summary>
+    /// 回复状态表太大时清掉过期的
+    /// </summary>
+    private void PruneReplyState()
+    {
+        if (_replyStates.Count < ReplySeqLimit)
+        {
+            return;
+        }
+
+        var limit = DateTime.Now.AddMinutes(-ReplySeqLifetime);
+
+        foreach (var item in _replyStates)
+        {
+            if (item.Value.Last < limit)
+            {
+                _replyStates.TryRemove(item.Key, out _);
+            }
         }
     }
 
@@ -408,6 +624,23 @@ public class ProxyInstance : IProxyInstasnce
                 Secret = true,
                 Description = "pfx 的密码，导出证书时设置的",
                 Placeholder = "证书密码"
+            },
+            ["ActiveFallback"] = new ConfigBoolMap
+            {
+                Key = "ActiveFallback",
+                Value = _data.ActiveFallback,
+                Default = false,
+                Description = "被动回复超限时改成主动发送；官方 2025-04-21 已下线主动推送，开了也只会在失败后停止发送"
+            },
+            ["PassiveLimit"] = new ConfigIntMap
+            {
+                Key = "PassiveLimit",
+                Value = _data.PassiveLimit <= 0 ? 5 : _data.PassiveLimit,
+                Min = 1,
+                Max = 50,
+                Default = 5,
+                Description = "同一条消息最多被动回复几次，官方限制是 5 次（群聊 5 分钟、单聊 60 分钟内有效）",
+                Placeholder = "5"
             }
         };
     }
@@ -444,6 +677,16 @@ public class ProxyInstance : IProxyInstasnce
         if (data.TryGetValue("CertificatePassword", out var certificatePassword) && certificatePassword is ConfigStringMap certificatePasswordMap)
         {
             _data.CertificatePassword = certificatePasswordMap.Value ?? "";
+        }
+
+        if (data.TryGetValue("ActiveFallback", out var activeFallback) && activeFallback is ConfigBoolMap activeFallbackMap)
+        {
+            _data.ActiveFallback = activeFallbackMap.Value;
+        }
+
+        if (data.TryGetValue("PassiveLimit", out var passiveLimit) && passiveLimit is ConfigIntMap passiveLimitMap)
+        {
+            _data.PassiveLimit = Math.Clamp(passiveLimitMap.Value, 1, 50);
         }
 
         SaveConfig();

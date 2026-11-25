@@ -7,6 +7,7 @@ namespace PlugBotSharp.GsCoreProxy;
 /// </summary>
 [JsonSourceGenerationOptions(WriteIndented = false, PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(GsMessage))]
+[JsonSerializable(typeof(List<GsMessage>))]
 [JsonSerializable(typeof(GsMessageReceive))]
 public partial class GenshinJsonContext : JsonSerializerContext
 {
