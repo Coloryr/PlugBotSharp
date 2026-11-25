@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Messages;
 
@@ -15,7 +16,7 @@ public class EventManagerTests : ComponentTestBase
 
         try
         {
-            EventManager.RegisterMessageHook(owner, _ => [new TextMessage("pong")]);
+            EventManager.SubscribeMessage(owner, _ => [new TextMessage("pong")]);
 
             var replies = EventManager.HandleMessage("qq", Guid.NewGuid(), new TextMessage("ping"));
 
@@ -35,8 +36,8 @@ public class EventManagerTests : ComponentTestBase
 
         try
         {
-            EventManager.RegisterMessageHook(first, _ => [new TextMessage("a")]);
-            EventManager.RegisterMessageHook(second, _ => [new TextMessage("b")]);
+            EventManager.SubscribeMessage(first, _ => [new TextMessage("a")]);
+            EventManager.SubscribeMessage(second, _ => [new TextMessage("b")]);
 
             var replies = EventManager.HandleMessage("qq", Guid.NewGuid(), new TextMessage("x"));
 
@@ -50,6 +51,73 @@ public class EventManagerTests : ComponentTestBase
     }
 
     [Fact]
+    public async Task Async_message_hook_does_not_block_and_can_reply_later()
+    {
+        var plugin = new object();
+        var sender = new object();
+        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        BaseMessage? replied = null;
+
+        try
+        {
+            EventManager.SubscribeMessage(plugin, async evt =>
+            {
+                await gate.Task;
+
+                await evt.Reply(new TextMessage("later"));
+            });
+
+            EventManager.RegisterSendTarget(sender, (_, msg) =>
+            {
+                replied = msg;
+
+                return Task.CompletedTask;
+            });
+
+            var replies = EventManager.HandleMessage("qq", Guid.NewGuid(), new TextMessage("hi"));
+
+            // 长任务没结束，分发已经返回
+            Assert.Empty(replies);
+            Assert.Null(replied);
+
+            gate.SetResult(true);
+
+            for (var i = 0; i < 100 && replied is null; i++)
+            {
+                await Task.Delay(20);
+            }
+
+            Assert.Equal("later", Assert.IsType<TextMessage>(replied!).Text);
+        }
+        finally
+        {
+            EventManager.Unregister(plugin);
+            EventManager.Unregister(sender);
+        }
+    }
+
+    [Fact]
+    public async Task Broken_async_message_hook_is_ignored()
+    {
+        var plugin = new object();
+
+        try
+        {
+            EventManager.SubscribeMessage(plugin, (Func<MessageEvent, Task>)(_ => throw new InvalidOperationException("boom")));
+
+            var replies = EventManager.HandleMessage("qq", Guid.Empty, new TextMessage("hi"));
+
+            Assert.Empty(replies);
+
+            await Task.Delay(200);
+        }
+        finally
+        {
+            EventManager.Unregister(plugin);
+        }
+    }
+
+    [Fact]
     public void Broken_message_hook_does_not_stop_the_others()
     {
         var broken = new object();
@@ -57,8 +125,8 @@ public class EventManagerTests : ComponentTestBase
 
         try
         {
-            EventManager.RegisterMessageHook(broken, _ => throw new InvalidOperationException("boom"));
-            EventManager.RegisterMessageHook(healthy, _ => [new TextMessage("ok")]);
+            EventManager.SubscribeMessage(broken, (Func<ProxyMessage, List<BaseMessage>>)(_ => throw new InvalidOperationException("boom")));
+            EventManager.SubscribeMessage(healthy, _ => [new TextMessage("ok")]);
 
             var replies = EventManager.HandleMessage("qq", Guid.Empty, new TextMessage("x"));
 
@@ -76,9 +144,9 @@ public class EventManagerTests : ComponentTestBase
     {
         var owner = new object();
 
-        EventManager.RegisterMessageHook(owner, _ => [new TextMessage("x")]);
-        EventManager.RegisterProxyHook(owner, _ => { });
-        EventManager.RegisterPluginHook(owner, _ => { });
+        EventManager.SubscribeMessage(owner, _ => [new TextMessage("x")]);
+        EventManager.SubscribeProxy(owner, _ => { });
+        EventManager.SubscribePlugin(owner, _ => { });
 
         Assert.True(EventManager.Unregister(owner));
         Assert.Empty(EventManager.HandleMessage("qq", Guid.Empty, new TextMessage("x")));
@@ -94,7 +162,7 @@ public class EventManagerTests : ComponentTestBase
 
         try
         {
-            EventManager.RegisterSendHook(owner, (ctx, msg) =>
+            EventManager.RegisterSendTarget(owner, (ctx, msg) =>
             {
                 received = ctx;
                 body = msg;
@@ -124,12 +192,149 @@ public class EventManagerTests : ComponentTestBase
     }
 
     [Fact]
+    public async Task Send_reaches_the_instance_by_uuid()
+    {
+        var proxy = new FakeProxy();
+        var assembly = TestComponents.AddProxy("qq", proxy);
+
+        assembly.Init();
+        assembly.Load();
+        assembly.Enable();
+
+        Assert.True(InstanceManager.TryCreate("qq", "主账号", out var uuid, out _, out var error), error);
+
+        var instance = proxy.LastInstance!;
+
+        try
+        {
+            await EventManager.HandleSendAsync(new ProxyMessage
+            {
+                Id = "qq",
+                Uuid = uuid,
+                SenderType = MessageSenderType.Group,
+                Sender = "user",
+                Target = "group",
+                Message = new TextMessage("x")
+            }, new TextMessage("hi"));
+
+            Assert.Equal("hi", Assert.IsType<TextMessage>(instance.LastReply).Text);
+        }
+        finally
+        {
+            Assert.True(InstanceManager.TryRemove(uuid, true, out error), error);
+        }
+    }
+
+    [Fact]
+    public async Task Send_is_canceled_by_an_interceptor()
+    {
+        var sender = new object();
+        var filter = new object();
+        var sent = 0;
+
+        try
+        {
+            EventManager.RegisterSendTarget(sender, (_, _) =>
+            {
+                sent++;
+
+                return Task.CompletedTask;
+            });
+
+            EventManager.SubscribeSendFilter(filter, (_, _) => Task.FromResult(true));
+
+            await EventManager.HandleSendAsync(Context(), new TextMessage("hi"));
+
+            Assert.Equal(0, sent);
+        }
+        finally
+        {
+            EventManager.Unregister(sender);
+            EventManager.Unregister(filter);
+        }
+    }
+
+    [Fact]
+    public async Task Interceptor_can_let_the_message_through()
+    {
+        var sender = new object();
+        var filter = new object();
+        var sent = 0;
+
+        try
+        {
+            EventManager.RegisterSendTarget(sender, (_, _) =>
+            {
+                sent++;
+
+                return Task.CompletedTask;
+            });
+
+            EventManager.SubscribeSendFilter(filter, (_, _) => Task.FromResult(false));
+
+            await EventManager.HandleSendAsync(Context(), new TextMessage("hi"));
+
+            Assert.Equal(1, sent);
+        }
+        finally
+        {
+            EventManager.Unregister(sender);
+            EventManager.Unregister(filter);
+        }
+    }
+
+    [Fact]
+    public async Task Broken_interceptor_does_not_block_the_message()
+    {
+        var sender = new object();
+        var filter = new object();
+        var sent = 0;
+
+        try
+        {
+            EventManager.RegisterSendTarget(sender, (_, _) =>
+            {
+                sent++;
+
+                return Task.CompletedTask;
+            });
+
+            EventManager.SubscribeSendFilter(filter, (_, _) => throw new InvalidOperationException("boom"));
+
+            await EventManager.HandleSendAsync(Context(), new TextMessage("hi"));
+
+            Assert.Equal(1, sent);
+        }
+        finally
+        {
+            EventManager.Unregister(sender);
+            EventManager.Unregister(filter);
+        }
+    }
+
+    /// <summary>
+    /// 造一个发送上下文
+    /// </summary>
+    private static ProxyMessage Context()
+    {
+        return new ProxyMessage
+        {
+            Id = "qq",
+            Uuid = Guid.NewGuid(),
+            SenderType = MessageSenderType.Group,
+            Sender = "user",
+            Target = "group",
+            Message = new TextMessage("x")
+        };
+    }
+
+    [Fact]
     public async Task Send_hook_is_removed_with_the_owner()
     {
         var owner = new object();
         var count = 0;
 
-        EventManager.RegisterSendHook(owner, (_, _) =>
+        EventManager.RegisterSendTarget(owner, (_, _) =>
         {
             count++;
             return Task.CompletedTask;
@@ -164,7 +369,7 @@ public class EventManagerTests : ComponentTestBase
 
         try
         {
-            EventManager.RegisterPluginHook(owner, e => seen.Add(e));
+            EventManager.SubscribePlugin(owner, e => seen.Add(e));
 
             assembly.Init();
             assembly.Load();
@@ -192,14 +397,14 @@ public class EventManagerTests : ComponentTestBase
 
         try
         {
-            EventManager.RegisterPluginHook(owner, e => received = e);
+            EventManager.SubscribePlugin(owner, e => received = e);
 
-            EventManager.RaisePlugin("demo", "ping", 42);
+            EventManager.RaisePlugin("demo", "ping", JsonNode.Parse("""{"value":42}"""));
 
             Assert.NotNull(received);
             Assert.Equal(PluginEventType.Custom, received!.Type);
             Assert.Equal("ping", received.Name);
-            Assert.Equal(42, received.Data);
+            Assert.Equal(42, received.Data!["value"]!.GetValue<int>());
         }
         finally
         {
@@ -222,7 +427,7 @@ public class EventManagerTests : ComponentTestBase
 
         try
         {
-            EventManager.RegisterProxyHook(owner, e => seen.Add(e));
+            EventManager.SubscribeProxy(owner, e => seen.Add(e));
 
             Assert.True(InstanceManager.TryCreate("qq", "主账号", out var uuid, out _, out var error), error);
 
@@ -254,7 +459,7 @@ public class EventManagerTests : ComponentTestBase
         assembly.Load();
 
         var replies = 0;
-        EventManager.RegisterMessageHook(plugin, _ =>
+        EventManager.SubscribeMessage(plugin, _ =>
         {
             replies++;
             return [];

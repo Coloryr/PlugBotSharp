@@ -6,6 +6,14 @@ namespace PlugBotSharp.Tests;
 
 public class ComponentApiTests : ComponentTestBase
 {
+    /// <summary>
+    /// 模拟 RegisterEventHook 阶段的注册器
+    /// </summary>
+    private static ComponentRegister Register(object owner)
+    {
+        return new ComponentRegister(owner, "test");
+    }
+
     [Fact]
     public void RegisterHttpPath_for_plugin_uses_component_id()
     {
@@ -14,7 +22,7 @@ public class ComponentApiTests : ComponentTestBase
 
         Func<HttpContext, Task> handler = _ => Task.CompletedTask;
 
-        ComponentApi.RegisterHttpPath(plugin, handler);
+        Register(plugin).RegisterHttpPath(handler);
 
         Assert.True(ApiRegistry.TryGet("api/demo", out var call));
         Assert.Same(handler, call);
@@ -32,7 +40,7 @@ public class ComponentApiTests : ComponentTestBase
 
         Func<HttpContext, Task> handler = _ => Task.CompletedTask;
 
-        ComponentApi.RegisterHttpPath(proxy, handler);
+        Register(proxy).RegisterHttpPath(handler);
 
         Assert.True(ApiRegistry.TryGet("api/qq", out var call));
         Assert.Same(handler, call);
@@ -45,7 +53,7 @@ public class ComponentApiTests : ComponentTestBase
     [Fact]
     public void RegisterHttpPath_for_instance_throws_when_not_created()
     {
-        Assert.Throws<InvalidOperationException>(() => ComponentApi.RegisterHttpPath(new FakeInstance(), _ => Task.CompletedTask));
+        Assert.Throws<InvalidOperationException>(() => Register(new FakeInstance()).RegisterHttpPath(_ => Task.CompletedTask));
     }
 
     [Fact]
@@ -53,7 +61,7 @@ public class ComponentApiTests : ComponentTestBase
     {
         var plugin = new FakePlugin();
 
-        Assert.Throws<InvalidOperationException>(() => ComponentApi.RegisterHttpPath(plugin, _ => Task.CompletedTask));
+        Assert.Throws<InvalidOperationException>(() => Register(plugin).RegisterHttpPath(_ => Task.CompletedTask));
     }
 
     [Fact]
@@ -62,7 +70,7 @@ public class ComponentApiTests : ComponentTestBase
         var plugin = new FakePlugin();
         TestComponents.AddPlugin("demo", plugin);
 
-        ComponentApi.RegisterHttpPath(plugin, _ => Task.CompletedTask);
+        Register(plugin).RegisterHttpPath(_ => Task.CompletedTask);
 
         Assert.True(ComponentApi.UnregisterHttpPath(plugin));
         Assert.False(ApiRegistry.TryGet("api/demo", out _));
@@ -77,7 +85,7 @@ public class ComponentApiTests : ComponentTestBase
         var proxy = new FakeProxy();
         TestComponents.AddProxy("qq", proxy);
 
-        ComponentApi.RegisterHttpPath(proxy, _ => Task.CompletedTask);
+        Register(proxy).RegisterHttpPath(_ => Task.CompletedTask);
 
         Assert.True(ComponentApi.UnregisterHttpPath(proxy));
         Assert.False(ApiRegistry.TryGet("api/qq", out _));
@@ -99,7 +107,7 @@ public class ComponentApiTests : ComponentTestBase
 
         var instance = proxy.LastInstance!;
 
-        ComponentApi.RegisterHttpPath(instance, _ => Task.CompletedTask);
+        Register(instance).RegisterHttpPath(_ => Task.CompletedTask);
 
         Assert.True(ApiRegistry.TryGet($"api/qq/{uuid}", out _));
 
@@ -116,12 +124,12 @@ public class ComponentApiTests : ComponentTestBase
         var second = new FakePlugin();
 
         TestComponents.AddPlugin("demo", first);
-        ComponentApi.RegisterHttpPath(first, _ => Task.CompletedTask);
+        Register(first).RegisterHttpPath(_ => Task.CompletedTask);
 
         // 组件被替换后同一个路径归新实例所有
         TestComponents.AddPlugin("demo", second);
         Func<HttpContext, Task> handler = _ => Task.CompletedTask;
-        ComponentApi.RegisterHttpPath(second, handler);
+        Register(second).RegisterHttpPath(handler);
 
         Assert.False(ComponentApi.UnregisterHttpPath(first));
 
@@ -134,7 +142,7 @@ public class ComponentApiTests : ComponentTestBase
     {
         var plugin = new FakePlugin();
         TestComponents.AddPlugin("demo", plugin);
-        ComponentApi.RegisterHttpPath(plugin, _ => Task.CompletedTask);
+        Register(plugin).RegisterHttpPath(_ => Task.CompletedTask);
 
         ComponentManager.Plugins.Remove("demo", out _);
 

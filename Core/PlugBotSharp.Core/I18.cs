@@ -100,6 +100,12 @@ internal enum BotLangKey
     EventPluginFail,
     CertManifestInvalid,
     CertNotFound,
+    RegisterClosed,
+    EventNameInvalid,
+    EventPatternInvalid,
+    SendToSelf,
+    SendCanceled,
+    ProxyEventDenied,
     CertExtractFail,
     CertPasswordReadFail,
     InstanceActionFail,
@@ -344,6 +350,18 @@ internal static class BotLang
                 return "证书清单解析失败 {0}";
             case BotLangKey.CertNotFound:
                 return "找不到证书 {0}，检查 Certs 目录";
+            case BotLangKey.RegisterClosed:
+                return "组件 {0} 只能在 RegisterEventHook 阶段注册和订阅事件";
+            case BotLangKey.EventNameInvalid:
+                return "事件名必须是 [组件id]事件id 的格式 {0}";
+            case BotLangKey.EventPatternInvalid:
+                return "订阅事件必须是 组件id + 事件id，各自可以用 * 通配，当前是 {0} / {1}";
+            case BotLangKey.SendToSelf:
+                return "代理 {0} 不能把消息发给自己";
+            case BotLangKey.SendCanceled:
+                return "发送被拦截器取消 {0}";
+            case BotLangKey.ProxyEventDenied:
+                return "组件 {0} 不是代理，不能注册代理事件";
             case BotLangKey.CertExtractFail:
                 return "证书压缩包解压失败 {0}";
             case BotLangKey.CertPasswordReadFail:
@@ -623,6 +641,18 @@ internal static class BotLang
                 return "Cert manifest parse failed {0}";
             case BotLangKey.CertNotFound:
                 return "Cert {0} not found, check the Certs folder";
+            case BotLangKey.RegisterClosed:
+                return "Component {0} can only register or subscribe in RegisterEventHook";
+            case BotLangKey.EventNameInvalid:
+                return "Event name must look like [component]event: {0}";
+            case BotLangKey.EventPatternInvalid:
+                return "Subscription needs component id + event id, each may be *, got {0} / {1}";
+            case BotLangKey.SendToSelf:
+                return "Proxy {0} cannot send a message to itself";
+            case BotLangKey.SendCanceled:
+                return "Send canceled by an interceptor {0}";
+            case BotLangKey.ProxyEventDenied:
+                return "Component {0} is not a proxy and cannot register proxy events";
             case BotLangKey.CertExtractFail:
                 return "Cert archive extract failed {0}";
             case BotLangKey.CertPasswordReadFail:

@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using PlugBotSharp.Core.Configs;
 
 namespace PlugBotSharp.Core.Auth;

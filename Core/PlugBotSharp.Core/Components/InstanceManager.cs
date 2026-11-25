@@ -351,6 +351,17 @@ internal static class InstanceManager
     }
 
     /// <summary>
+    /// 取实例上报的自定义状态
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    internal static IReadOnlyDictionary<string, string> GetStates(Guid uuid)
+    {
+        return s_instances.TryGetValue(uuid, out var entry)
+            ? StateRegistry.Get(entry.Instance)
+            : new Dictionary<string, string>();
+    }
+
+    /// <summary>
     /// 重载实例配置：Disable 实例 → 组件 Reload 实例 → Reload 实例 → Enable 实例
     /// </summary>
     /// <param name="uuid">实例 uuid</param>
@@ -456,6 +467,7 @@ internal static class InstanceManager
 
                 ApiRegistry.Unregister(entry.Instance);
                 ServerRegistry.StopAll(entry.Instance);
+                StateRegistry.Remove(entry.Instance);
                 EventManager.Unregister(entry.Instance);
             }
 
@@ -572,15 +584,7 @@ internal static class InstanceManager
             return false;
         }
 
-        try
-        {
-            instance.RegisterEventHook();
-        }
-        catch (Exception e)
-        {
-            BotManager.Logger.Error(e, BotLang.GetLang(BotLangKey.InstanceActionFail, uuid));
-        }
-
+        // 先登记再注册事件，实例的 http 路径要靠 uuid 解析出来
         s_instances[uuid] = new InstanceEntry
         {
             ProxyId = proxyId,
@@ -589,6 +593,25 @@ internal static class InstanceManager
             Uuid = uuid,
             Instance = instance
         };
+
+        var register = new ComponentRegister(instance, proxyId, proxyId, uuid);
+
+        try
+        {
+            instance.RegisterEventHook(register);
+        }
+        catch (Exception e)
+        {
+            BotManager.Logger.Error(e, BotLang.GetLang(BotLangKey.InstanceActionFail, uuid));
+        }
+        finally
+        {
+            register.Close();
+        }
+
+        // 宿主把发到这个实例的消息转给它自己的 SendAsync，拦截器已经在前面跑过了
+        EventManager.RegisterSendTarget(instance, (context, reply) =>
+            context.Uuid == uuid ? instance.SendAsync(context, reply) : Task.CompletedTask);
 
         return true;
     }

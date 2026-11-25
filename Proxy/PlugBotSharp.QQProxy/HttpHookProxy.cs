@@ -27,8 +27,6 @@ public class HttpHookProxy : IProxy
     public HttpHookProxy(ProxyInstance instance)
     {
         _instance = instance;
-
-        ComponentApi.RegisterHttpPath(instance, HandleCallback);
     }
 
     /// <inheritdoc/>
@@ -40,7 +38,6 @@ public class HttpHookProxy : IProxy
     /// <inheritdoc/>
     public void Stop()
     {
-        ComponentApi.UnregisterHttpPath(_instance);
     }
 
     /// <inheritdoc/>
@@ -49,11 +46,4 @@ public class HttpHookProxy : IProxy
         return QQApi.Send(_token ?? "", target, scene, message, replyId, sequence);
     }
 
-    /// <summary>
-    /// 处理平台回调
-    /// </summary>
-    private Task HandleCallback(HttpContext ctx)
-    {
-        return CallbackHandler.HandleAsync(ctx, _instance);
-    }
 }

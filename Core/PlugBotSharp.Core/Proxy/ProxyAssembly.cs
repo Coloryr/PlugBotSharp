@@ -68,6 +68,21 @@ internal class ProxyAssembly : BaseAssembly
         State = ComponentState.Loaded;
         Trace(BotLangKey.ComponentLoaded);
 
+        var register = new ComponentRegister(Proxy, Meta.Id, Meta.Id);
+
+        try
+        {
+            Proxy.RegisterEventHook(register);
+        }
+        catch (Exception e)
+        {
+            BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.ComponentActionFail, Meta.Id));
+        }
+        finally
+        {
+            register.Close();
+        }
+
         return true;
     }
 
@@ -144,6 +159,8 @@ internal class ProxyAssembly : BaseAssembly
             State = ComponentState.Unloaded;
             ApiRegistry.Unregister(Proxy);
             ServerRegistry.StopAll(Proxy);
+            StateRegistry.Remove(Proxy);
+            EventManager.Unregister(Proxy);
         }
     }
 

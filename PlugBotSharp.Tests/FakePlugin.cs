@@ -1,3 +1,4 @@
+using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Plugin;
 
@@ -29,9 +30,15 @@ internal sealed class FakePlugin : IBasePlugin
         ReloadCount++;
     }
 
-    public void RegisterEventHook()
+    /// <summary>
+    /// 注册阶段拿到的注册器，测试里用来断言
+    /// </summary>
+    public IRegister? Register { get; private set; }
+
+    public void RegisterEventHook(IRegister register)
     {
         HookCount++;
+        Register = register;
     }
 
     public Dictionary<string, ConfigMap> ConfigMap()

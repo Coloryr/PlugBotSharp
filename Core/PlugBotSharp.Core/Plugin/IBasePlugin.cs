@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using PlugBotSharp.Core.Configs;
@@ -8,7 +8,8 @@ namespace PlugBotSharp.Core.Plugin;
 public interface IBasePlugin : IComponent
 {
     /// <summary>
-    /// 开始注册事件
+    /// 注册 / 订阅事件的阶段，过了这个阶段注册器就关闭
     /// </summary>
-    public void RegisterEventHook();
+    /// <param name="register">注册器</param>
+    public void RegisterEventHook(IRegister register);
 }

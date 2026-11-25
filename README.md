@@ -4,7 +4,7 @@
 
 - 面板和机器人跑在同一个进程里，分发时只需要一个目录
 - 组件是一个 zip，拖进面板就能装，加载 / 卸载 / 禁用都不用重启
-- 官方带 QQ 机器人（QQProxy）、OneBot 11 / 12（OneBotProxy）和 gsuid_core（GenshinProxy）三种代理
+- 官方带 QQ 机器人（QQProxy）、OneBot 11 / 12（OneBotProxy）和 gsuid_core（GsCoreProxy）三种代理
 - 登录、多账户、会话管理和登录防爆破都有
 
 想二次开发、写组件、看协议细节，见 [docs/README.md](docs/README.md)。
@@ -19,7 +19,7 @@ dotnet run --project PlugBotSharp.Run
 首次启动会创建运行目录，然后：
 
 1. 浏览器打开 <http://127.0.0.1:10000>
-2. 创建初始管理员账户（**只能创建这一个**，之后的账户在面板里加）
+2. 创建初始管理员账户（**只能创建这一个**，之后的账户在面板里加），账户存在运行目录的 `Configs/Accounts.json`，重启不会丢
 3. 在「组件」页安装组件 zip，在「实例」页创建实例
 
 运行目录默认是程序所在目录（`AppContext.BaseDirectory`）。`Config.json` 默认只有端口：

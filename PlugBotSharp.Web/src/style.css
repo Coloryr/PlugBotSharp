@@ -346,6 +346,11 @@ select:disabled {
   margin-top: 5px;
 }
 
+.state-dep {
+  background: #eef6ff;
+  color: #1f6feb;
+}
+
 .dep {
   font-size: 11px;
   color: var(--muted);

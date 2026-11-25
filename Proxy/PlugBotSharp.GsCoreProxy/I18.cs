@@ -1,7 +1,7 @@
 using NLog;
 using PlugBotSharp.Core;
 
-namespace PlugBotSharp.GenshinProxy;
+namespace PlugBotSharp.GsCoreProxy;
 
 public enum GenshinLangKey
 {
@@ -23,7 +23,7 @@ public static class GenshinLang
     /// <summary>
     /// 组件日志
     /// </summary>
-    public static Logger Log { get; } = LogManager.GetLogger("Genshin");
+    public static Logger Log { get; } = LogManager.GetLogger("GsCore");
 
     /// <summary>
     /// 按当前语言取文案并格式化参数

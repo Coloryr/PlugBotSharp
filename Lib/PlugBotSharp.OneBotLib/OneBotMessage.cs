@@ -220,6 +220,13 @@ public static class OneBotMessage
             case ImageFileMessage image:
                 array.Add(Segment("image", new JsonObject { ["file"] = image.File }));
                 break;
+            case ImageMessage image:
+                // 内存里的图片转成 base64://，OneBot 实现都能直接发
+                array.Add(Segment("image", new JsonObject
+                {
+                    ["file"] = "base64://" + Convert.ToBase64String(image.Image.ToArray())
+                }));
+                break;
             case RecordMessage record:
                 array.Add(Segment("record", new JsonObject { ["file"] = record.Url ?? record.File }));
                 break;

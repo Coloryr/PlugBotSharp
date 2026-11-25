@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace PlugBotSharp.GenshinProxy;
+namespace PlugBotSharp.GsCoreProxy;
 
 /// <summary>
 /// 实例配置，放在 Instances/{uuid}/config.json

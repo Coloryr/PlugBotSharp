@@ -73,13 +73,19 @@ internal class PluginAssembly : BaseAssembly
         Trace(BotLangKey.ComponentLoaded);
         RaiseEvent(PluginEventType.Loaded);
 
+        var register = new ComponentRegister(Plugin, Meta.Id);
+
         try
         {
-            Plugin.RegisterEventHook();
+            Plugin.RegisterEventHook(register);
         }
         catch (Exception e)
         {
             BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.ComponentActionFail, Meta.Id));
+        }
+        finally
+        {
+            register.Close();
         }
 
         return true;
@@ -181,6 +187,7 @@ internal class PluginAssembly : BaseAssembly
             State = ComponentState.Unloaded;
             ApiRegistry.Unregister(Plugin);
             ServerRegistry.StopAll(Plugin);
+            StateRegistry.Remove(Plugin);
             EventManager.Unregister(Plugin);
             RaiseEvent(PluginEventType.Unloaded);
         }

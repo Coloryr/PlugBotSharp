@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using PlugBotSharp.Core.Configs;
@@ -454,7 +454,7 @@ internal static class ComponentLoader
             Context = context
         };
 
-        // 先放进字典，插件在 Enable 里就能调用 ComponentApi.RegisterHttpPath
+        // 先放进字典，实例注册 http 路径时要靠它解析出 uuid
         ComponentManager.Plugins[meta.Id] = assembly;
 
         try

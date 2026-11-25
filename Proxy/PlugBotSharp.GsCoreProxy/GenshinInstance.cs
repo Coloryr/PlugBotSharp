@@ -1,13 +1,14 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
 using PlugBotSharp.Core.Proxy;
 
-namespace PlugBotSharp.GenshinProxy;
+namespace PlugBotSharp.GsCoreProxy;
 
 /// <summary>
-/// gsuid_core 实例：把平台消息转给 core，再把 core 的消息交给对应平台实例发送
+/// gsuid_core 实例：把平台消息转给 core，同时接收 core 下发的消息
 /// </summary>
 public class GenshinInstance : IProxyInstasnce
 {
@@ -19,8 +20,43 @@ public class GenshinInstance : IProxyInstasnce
 
     private GenshinClient? _client;
 
+    /// <summary>
+    /// 代理事件句柄，core 下发的消息从这里注入
+    /// </summary>
+    private ProxyEventHandle? _event;
+
+    /// <summary>
+    /// 发送句柄，回复先过拦截器再发回 core
+    /// </summary>
+    private SendHandle? _send;
+
     private bool _enabled;
     private DateTime _lastTry;
+
+    /// <summary>
+    /// 收到 core 下发的消息条数，作为状态上报
+    /// </summary>
+    private int _received;
+
+    /// <summary>
+    /// 收到条数的状态句柄
+    /// </summary>
+    private StateHandle? _receiveState;
+
+    /// <summary>
+    /// 发出去的消息 id -> 发起的实例，core 的回复会带回同一个 msg_id
+    /// </summary>
+    private readonly ConcurrentDictionary<string, ProxyMessage> _msgRoutes = new();
+
+    /// <summary>
+    /// 群 / 用户 -> 发起的实例，msg_id 对不上时按会话兜底
+    /// </summary>
+    private readonly ConcurrentDictionary<string, ProxyMessage> _chatRoutes = new();
+
+    /// <summary>
+    /// 路由表最多留这么多条，防止一直涨
+    /// </summary>
+    private const int RouteLimit = 256;
 
     /// <summary>
     /// 创建实例
@@ -61,10 +97,17 @@ public class GenshinInstance : IProxyInstasnce
     }
 
     /// <inheritdoc/>
-    public void RegisterEventHook()
+    public void RegisterEventHook(IRegister register)
     {
         // 订阅所有平台的消息，转给 gsuid_core
-        ComponentApi.RegisterMessageHook(this, Forward);
+        register.SubscribeMessage(Forward);
+
+        // core 下发的消息注入给插件，回复走发送句柄
+        _event = register.RegisterProxyEvent();
+        _send = register.RegisterSend();
+
+        // 收到 core 下发的消息条数
+        _receiveState = register.RegisterState("recv");
     }
 
     /// <inheritdoc/>
@@ -202,27 +245,228 @@ public class GenshinInstance : IProxyInstasnce
     }
 
     /// <summary>
+    /// core 下发的消息转成统一的消息事件
+    /// </summary>
+    /// <param name="receive">core 的消息</param>
+    internal ProxyMessage? BuildMessage(GsMessageReceive receive)
+    {
+        var content = GenshinMessage.FromGs(receive.Content, out _);
+
+        if (content.Count == 0)
+        {
+            return null;
+        }
+
+        // core 发出来的消息没有 user_type，用 target_type 标目标
+        var userType = receive.TargetType ?? receive.UserType;
+
+        var senderType = userType switch
+        {
+            "group" => MessageSenderType.Group,
+            "channel" or "sub_channel" => MessageSenderType.Guild,
+            _ => MessageSenderType.User
+        };
+
+        var target = !string.IsNullOrEmpty(receive.GroupId)
+            ? receive.GroupId
+            : userType is "group" or "channel" or "sub_channel" ? receive.TargetId ?? "" : "";
+
+        return new ProxyMessage
+        {
+            Id = _proxyId,
+            Uuid = _uuid,
+            SenderType = senderType,
+            Sender = receive.UserId ?? "",
+            Target = target,
+            Message = content.Count == 1 ? content[0] : new ListMessage([.. content]),
+            ReplyId = string.IsNullOrEmpty(receive.MsgId) ? null : receive.MsgId
+        };
+    }
+
+    /// <summary>
+    /// 收到 core 下发的消息，解析成统一消息后注入给所有订阅者，回复再发回 core
+    /// </summary>
+    internal void OnReceived(GsMessageReceive receive)
+    {
+        try
+        {
+            if (ProxyMain.LogMessage)
+            {
+                GenshinLang.Log.Debug(JsonSerializer.Serialize(receive, GenshinJsonContext.Default.GsMessageReceive));
+            }
+
+            var message = BuildMessage(receive);
+
+            if (message is null)
+            {
+                return;
+            }
+
+            _received++;
+            _receiveState?.Set(_received.ToString());
+
+            // 这条是刚才转出去的消息的回复，直接发回发起的那个实例（QQ / OneBot …）
+            var route = FindRoute(receive);
+
+            if (route is not null)
+            {
+                var origin = new ProxyMessage
+                {
+                    Id = route.Id,
+                    Uuid = route.Uuid,
+                    SenderType = route.SenderType,
+                    Sender = route.Sender,
+                    Target = route.Target,
+                    Message = message.Message,
+                    ReplyId = route.ReplyId
+                };
+
+                _ = Send(origin, message.Message);
+
+                return;
+            }
+
+            // 主动推送没有发起者，注入给插件
+            var replies = _event?.Dispatch(message);
+
+            if (replies is null)
+            {
+                return;
+            }
+
+            foreach (var reply in replies)
+            {
+                _ = Send(message, reply);
+            }
+        }
+        catch (Exception e)
+        {
+            GenshinLang.Log.Error(e, GenshinLang.Get(GenshinLangKey.CoreSendFail));
+        }
+    }
+
+    /// <summary>
     /// 平台消息转给 gsuid_core
     /// </summary>
     private List<BaseMessage> Forward(ProxyMessage message)
     {
-        // 别的组件发出去的消息不再转，避免回环
+        // 自己的消息在 OnReceived 里处理，这里不再转，避免回环
         if (message.Id == _proxyId)
         {
             return [];
         }
 
-        var content = GenshinMessage.ToGs(message.Message);
+        var receive = ToReceive(message, message.Message);
+
+        if (receive is not null)
+        {
+            RememberRoute(message);
+            _ = SendToCoreAsync(receive);
+        }
+
+        return [];
+    }
+
+    /// <summary>
+    /// 记住这条消息是从哪个实例发出去的，core 回复时好送回去
+    /// </summary>
+    /// <param name="message">发出去的消息</param>
+    private void RememberRoute(ProxyMessage message)
+    {
+        var route = new ProxyMessage
+        {
+            Id = message.Id,
+            Uuid = message.Uuid,
+            SenderType = message.SenderType,
+            Sender = message.Sender,
+            Target = message.Target,
+            Message = message.Message,
+            ReplyId = message.ReplyId
+        };
+
+        if (!string.IsNullOrEmpty(message.ReplyId))
+        {
+            Trim(_msgRoutes);
+            _msgRoutes[message.ReplyId] = route;
+        }
+
+        var chatType = message.SenderType == MessageSenderType.Group ? "group" : "direct";
+        var chatId = string.IsNullOrEmpty(message.Target) ? message.Sender : message.Target;
+
+        if (!string.IsNullOrEmpty(chatId))
+        {
+            Trim(_chatRoutes);
+            _chatRoutes[chatType + ":" + chatId] = route;
+        }
+    }
+
+    /// <summary>
+    /// 找这条回复是从哪个实例发出去的：先按 msg_id，再按会话兜底
+    /// </summary>
+    /// <param name="receive">core 的回复</param>
+    private ProxyMessage? FindRoute(GsMessageReceive receive)
+    {
+        if (!string.IsNullOrEmpty(receive.MsgId) && _msgRoutes.TryRemove(receive.MsgId, out var byMsg))
+        {
+            return byMsg;
+        }
+
+        var type = receive.TargetType ?? receive.UserType;
+        var id = receive.TargetId ?? receive.GroupId ?? receive.UserId;
+
+        return string.IsNullOrEmpty(id) ? null : _chatRoutes.GetValueOrDefault(type + ":" + id);
+    }
+
+    /// <summary>
+    /// 路由表满了就清掉一批，别一直涨
+    /// </summary>
+    private static void Trim(ConcurrentDictionary<string, ProxyMessage> map)
+    {
+        if (map.Count < RouteLimit)
+        {
+            return;
+        }
+
+        foreach (var key in map.Keys.Take(map.Count - RouteLimit + 1))
+        {
+            map.TryRemove(key, out _);
+        }
+    }
+
+    /// <summary>
+    /// 发一条回复：先过拦截器，再真正发回 core
+    /// </summary>
+    /// <param name="context">消息上下文</param>
+    /// <param name="reply">要发的消息</param>
+    internal Task Send(ProxyMessage context, BaseMessage reply)
+    {
+        return _send is null ? SendAsync(context, reply) : _send.SendAsync(context, reply);
+    }
+
+    /// <inheritdoc/>
+    public Task SendAsync(ProxyMessage message, BaseMessage reply)
+    {
+        var receive = ToReceive(message, reply);
+
+        return receive is null ? Task.CompletedTask : SendToCoreAsync(receive);
+    }
+
+    /// <summary>
+    /// 统一消息转成 core 的消息体
+    /// </summary>
+    private GsMessageReceive? ToReceive(ProxyMessage message, BaseMessage reply)
+    {
+        var content = GenshinMessage.ToGs(reply);
 
         if (content.Count == 0)
         {
-            return [];
+            return null;
         }
 
         var isGroup = message.SenderType == MessageSenderType.Group;
         var target = string.IsNullOrEmpty(message.Target) ? message.Sender : message.Target;
 
-        var receive = new GsMessageReceive
+        return new GsMessageReceive
         {
             BotId = _data.BotId,
             MsgId = message.ReplyId ?? "",
@@ -232,10 +476,6 @@ public class GenshinInstance : IProxyInstasnce
             Sender = new Dictionary<string, string> { ["user_id"] = message.Sender },
             Content = content
         };
-
-        _ = SendToCoreAsync(receive);
-
-        return [];
     }
 
     /// <summary>
@@ -270,6 +510,8 @@ public class GenshinInstance : IProxyInstasnce
     private GenshinClient CreateClient()
     {
         var client = new GenshinClient();
+
+        client.MessageReceived += OnReceived;
 
         client.StateChanged += connected =>
         {

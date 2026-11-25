@@ -3,10 +3,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace PlugBotSharp.GenshinProxy;
+namespace PlugBotSharp.GsCoreProxy;
 
 /// <summary>
-/// 连到 gsuid_core 的 WebSocket 客户端，只往 core 发消息
+/// 连到 gsuid_core 的 WebSocket 客户端，收发都走这里
 /// </summary>
 internal sealed class GenshinClient : IDisposable
 {
@@ -19,6 +19,11 @@ internal sealed class GenshinClient : IDisposable
     /// 连接状态变化
     /// </summary>
     public event Action<bool>? StateChanged;
+
+    /// <summary>
+    /// core 下发的消息
+    /// </summary>
+    public event Action<GsMessageReceive>? MessageReceived;
 
     /// <summary>
     /// 是否已连接
@@ -103,7 +108,8 @@ internal sealed class GenshinClient : IDisposable
 
         try
         {
-            await ws.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+            // gsucore 用 receive_bytes() 读，必须发二进制帧，发 text 会把它整条连接打崩
+            await ws.SendAsync(bytes, WebSocketMessageType.Binary, true, CancellationToken.None);
         }
         finally
         {
@@ -112,22 +118,44 @@ internal sealed class GenshinClient : IDisposable
     }
 
     /// <summary>
-    /// 接收循环，只把数据读掉，避免缓冲区堆积和错过关闭帧
+    /// 接收循环，把整帧拼起来再解析，core 下发的消息交给上层
     /// </summary>
     private async Task ReceiveLoopAsync(ClientWebSocket ws, CancellationToken token)
     {
         var buffer = new byte[8192];
+        using var frame = new MemoryStream();
 
         try
         {
             while (!token.IsCancellationRequested && ws.State == WebSocketState.Open)
             {
-                var result = await ws.ReceiveAsync(buffer, token);
+                frame.SetLength(0);
 
-                if (result.MessageType == WebSocketMessageType.Close)
+                WebSocketReceiveResult result;
+
+                do
                 {
-                    break;
+                    result = await ws.ReceiveAsync(buffer, token);
+
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        try
+                        {
+                            await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "", token);
+                        }
+                        catch
+                        {
+                            // 回关闭帧失败不影响退出
+                        }
+
+                        return;
+                    }
+
+                    frame.Write(buffer, 0, result.Count);
                 }
+                while (!result.EndOfMessage);
+
+                HandleFrame(frame.ToArray());
             }
         }
         catch
@@ -137,6 +165,30 @@ internal sealed class GenshinClient : IDisposable
         finally
         {
             StateChanged?.Invoke(false);
+        }
+    }
+
+    /// <summary>
+    /// 解析一帧，认不出来只记日志
+    /// </summary>
+    /// <param name="payload">帧内容</param>
+    internal void HandleFrame(byte[] payload)
+    {
+        try
+        {
+            var text = Encoding.UTF8.GetString(payload);
+            var message = JsonSerializer.Deserialize(text, GenshinJsonContext.Default.GsMessageReceive);
+
+            if (message is null)
+            {
+                return;
+            }
+
+            MessageReceived?.Invoke(message);
+        }
+        catch (Exception e)
+        {
+            GenshinLang.Log.Warn(e, GenshinLang.Get(GenshinLangKey.CoreSendFail));
         }
     }
 

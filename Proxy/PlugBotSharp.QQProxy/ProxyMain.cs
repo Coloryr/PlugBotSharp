@@ -46,6 +46,11 @@ public class ProxyMain : IBaseProxy
     }
 
     /// <inheritdoc/>
+    public void RegisterEventHook(PlugBotSharp.Core.IRegister register)
+    {
+    }
+
+    /// <inheritdoc/>
     public IProxyInstasnce CreateInstance()
     {
         return new ProxyInstance(Meta.Info.Id);

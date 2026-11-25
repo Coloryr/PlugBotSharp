@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using PlugBotSharp.Core.Messages;
-using PlugBotSharp.GenshinProxy;
+using PlugBotSharp.GsCoreProxy;
 
 namespace PlugBotSharp.Tests;
 

@@ -536,6 +536,20 @@ internal static class ComponentManager
     }
 
     /// <summary>
+    /// 取组件的对象本身，用来读上报的状态
+    /// </summary>
+    /// <param name="id">组件 id</param>
+    internal static object? FindObject(string id)
+    {
+        return Find(id) switch
+        {
+            PluginAssembly plugin => plugin.Plugin,
+            ProxyAssembly proxy => proxy.Proxy,
+            _ => null
+        };
+    }
+
+    /// <summary>
     /// 取组件的通用接口，插件和代理都实现了 IBaseComponent
     /// </summary>
     /// <param name="id">组件 id</param>

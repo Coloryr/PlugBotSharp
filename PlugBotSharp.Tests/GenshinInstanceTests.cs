@@ -1,5 +1,5 @@
 using PlugBotSharp.Core.Configs;
-using PlugBotSharp.GenshinProxy;
+using PlugBotSharp.GsCoreProxy;
 
 namespace PlugBotSharp.Tests;
 

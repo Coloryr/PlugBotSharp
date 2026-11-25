@@ -5,9 +5,9 @@ public static class Meta
     public static MetaObj Info = new()
     {
         Name = "OneBotProxy",
-        Id = "onebot",
+        Id = "onebotproxy",
         Version = "1.0.0",
-        Description = "OneBot 11 代理",
+        Description = "OneBot 11/12 代理",
         Type = ComponentType.Proxy,
         Dlls =
         [

@@ -46,6 +46,16 @@ public class OneBotInstance : IProxyInstasnce
     private DateTime _lastTry;
 
     /// <summary>
+    /// 分发句柄，注册阶段拿到
+    /// </summary>
+    private ProxyEventHandle? _dispatch;
+
+    /// <summary>
+    /// 发送句柄，回复走它，先过插件的拦截器再真正发出去
+    /// </summary>
+    private SendHandle? _send;
+
+    /// <summary>
     /// 创建实例
     /// </summary>
     /// <param name="proxyId">代理组件 id</param>
@@ -84,18 +94,33 @@ public class OneBotInstance : IProxyInstasnce
     }
 
     /// <inheritdoc/>
-    public void RegisterEventHook()
+    public void RegisterEventHook(IRegister register)
     {
-        // 别的组件要往这个实例发消息时走这里，只处理发给自己实例的
-        ComponentApi.RegisterSendHook(this, SendByEventAsync);
+        // 收到消息后交给插件
+        _dispatch = register.RegisterProxyEvent();
+
+        // 回复先走发送句柄，拦截器放行才真正发
+        _send = register.RegisterSend();
+
     }
 
     /// <summary>
-    /// 处理别的组件发来的消息
+    /// 把收到的消息交给插件，返回要回复的消息
     /// </summary>
-    private Task SendByEventAsync(ProxyMessage context, BaseMessage reply)
+    /// <param name="message">收到的消息</param>
+    internal List<BaseMessage> Dispatch(ProxyMessage message)
     {
-        return context.Uuid == _uuid ? SendAsync(context, reply) : Task.CompletedTask;
+        return (_dispatch ??= new ProxyEventHandle()).Dispatch(message);
+    }
+
+    /// <summary>
+    /// 发一条回复：先过拦截器，再真正发到平台
+    /// </summary>
+    /// <param name="context">消息上下文</param>
+    /// <param name="reply">要发的消息</param>
+    internal Task Send(ProxyMessage context, BaseMessage reply)
+    {
+        return _send is null ? SendAsync(context, reply) : _send.SendAsync(context, reply);
     }
 
     /// <inheritdoc/>
@@ -565,11 +590,11 @@ public class OneBotInstance : IProxyInstasnce
             return;
         }
 
-        var replies = ComponentApi.DispatchMessage(message);
+        var replies = Dispatch(message);
 
         foreach (var reply in replies)
         {
-            _ = SendAsync(message, reply);
+            _ = Send(message, reply);
         }
     }
 

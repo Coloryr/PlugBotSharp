@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using NLog;
+using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
@@ -50,6 +51,16 @@ public class ProxyInstance : IProxyInstasnce
     private bool _update;
 
     private IProxy? _proxy;
+
+    /// <summary>
+    /// 分发句柄，注册阶段拿到
+    /// </summary>
+    private ProxyEventHandle? _dispatch;
+
+    /// <summary>
+    /// 发送句柄，回复走它，先过插件的拦截器再真正发出去
+    /// </summary>
+    private SendHandle? _send;
 
     /// <summary>
     /// 被动回复的序号，按消息 id 各自从 1 开始递增，平台要求同一条消息的多条回复序号递增
@@ -123,18 +134,50 @@ public class ProxyInstance : IProxyInstasnce
     }
 
     /// <inheritdoc/>
-    public void RegisterEventHook()
+    public void RegisterEventHook(IRegister register)
     {
-        // 别的组件要往这个实例发消息时走这里，只处理发给自己实例的
-        ComponentApi.RegisterSendHook(this, SendByEventAsync);
+        // 收到消息后交给插件
+        _dispatch = register.RegisterProxyEvent();
+
+        // 回复先走发送句柄，拦截器放行才真正发
+        _send = register.RegisterSend();
+
+
+        // WebHook 模式把回调挂到宿主上，WebHost 模式自己监听端口
+        register.RegisterHttpPath(HandleCallback);
     }
 
     /// <summary>
-    /// 处理别的组件发来的消息
+    /// 处理平台回调，实例没启用时不响应
     /// </summary>
-    private Task SendByEventAsync(ProxyMessage context, BaseMessage reply)
+    private Task HandleCallback(HttpContext ctx)
     {
-        return context.Uuid == _uuid ? SendAsync(context, reply) : Task.CompletedTask;
+        if (_proxy is null)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            return Task.CompletedTask;
+        }
+
+        return CallbackHandler.HandleAsync(ctx, this);
+    }
+
+    /// <summary>
+    /// 把收到的消息交给插件，返回要回复的消息
+    /// </summary>
+    /// <param name="message">收到的消息</param>
+    internal List<BaseMessage> Dispatch(ProxyMessage message)
+    {
+        return (_dispatch ??= new ProxyEventHandle()).Dispatch(message);
+    }
+
+    /// <summary>
+    /// 发一条回复：先过拦截器，再真正发到平台
+    /// </summary>
+    /// <param name="context">消息上下文</param>
+    /// <param name="reply">要发的消息</param>
+    internal Task Send(ProxyMessage context, BaseMessage reply)
+    {
+        return _send is null ? SendAsync(context, reply) : _send.SendAsync(context, reply);
     }
 
     /// <inheritdoc/>
@@ -281,8 +324,6 @@ public class ProxyInstance : IProxyInstasnce
     {
         Logger.Info(ProxyLang.GetLang(ProxyLangKey.Disable));
 
-        // 停用后回调地址不应该再收请求
-        ComponentApi.UnregisterHttpPath(this);
         _proxy?.SetToken(null);
         _proxy?.Stop();
         _proxy = null;

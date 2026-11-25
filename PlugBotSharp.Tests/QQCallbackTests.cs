@@ -118,7 +118,7 @@ public class QQCallbackTests
 
         try
         {
-            EventManager.RegisterMessageHook(owner, message =>
+            EventManager.SubscribeMessage(owner, message =>
             {
                 received = message;
                 return [new TextMessage("reply")];

@@ -325,7 +325,8 @@ internal static class AdminApi
             folder = x.Folder,
             loaded = x.Loaded,
             enabled = x.Enabled,
-            state = x.Loaded ? x.Enabled ? "enabled" : "disabled" : "unloaded"
+            state = x.Loaded ? x.Enabled ? "enabled" : "disabled" : "unloaded",
+            states = InstanceManager.GetStates(x.Uuid)
         }).ToList());
     }
 
@@ -520,7 +521,8 @@ internal static class AdminApi
             enabled = assembly?.State == ComponentState.Enabled,
             blocked,
             state,
-            folder
+            folder,
+            states = StateRegistry.Get(ComponentManager.FindObject(meta.Id))
         };
     }
 

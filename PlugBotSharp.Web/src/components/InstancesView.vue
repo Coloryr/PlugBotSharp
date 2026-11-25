@@ -171,6 +171,11 @@ onBeforeUnmount(() => {
           <td>
             <div class="name">{{ item.name || '未命名' }}</div>
             <div class="meta mono" :title="item.folder">{{ item.uuid }}</div>
+            <div v-if="item.states && Object.keys(item.states).length" class="deps">
+              <span v-for="(value, name) in item.states" :key="name" class="dep state-dep">
+                {{ name }}: {{ value }}
+              </span>
+            </div>
           </td>
           <td><span class="tag">{{ item.proxy }}</span></td>
           <td>

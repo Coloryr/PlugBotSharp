@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace PlugBotSharp.GenshinProxy;
+namespace PlugBotSharp.GsCoreProxy;
 
 /// <summary>
 /// gsuid_core 协议的序列化上下文

@@ -19,7 +19,7 @@
     <ProjectReference Include="..\Plugin\DemoPlugin\DemoPlugin.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Proxy\PlugBotSharp.QQProxy\PlugBotSharp.QQProxy.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\Proxy\PlugBotSharp.OneBotProxy\PlugBotSharp.OneBotProxy.csproj" ReferenceOutputAssembly="false" Private="false" />
-    <ProjectReference Include="..\Proxy\PlugBotSharp.GenshinProxy\PlugBotSharp.GenshinProxy.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\Proxy\PlugBotSharp.GsCoreProxy\PlugBotSharp.GsCoreProxy.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
 
   <!-- 组件包解到运行目录的 Components/{组件id} -->
@@ -36,21 +36,25 @@
     <DeployComponent Include="Components\demo">
       <Zip>..\Plugin\DemoPlugin\bin\$(Configuration)\$(TargetFramework)\DemoPlugin.zip</Zip>
     </DeployComponent>
-    <DeployComponent Include="Components\qq">
+    <DeployComponent Include="Components\qqproxy">
       <Zip>..\Proxy\PlugBotSharp.QQProxy\bin\$(Configuration)\$(TargetFramework)\PlugBotSharp.QQProxy.zip</Zip>
     </DeployComponent>
-    <DeployComponent Include="Components\onebot">
+    <DeployComponent Include="Components\onebotproxy">
       <Zip>..\Proxy\PlugBotSharp.OneBotProxy\bin\$(Configuration)\$(TargetFramework)\PlugBotSharp.OneBotProxy.zip</Zip>
     </DeployComponent>
-    <DeployComponent Include="Components\genshin">
-      <Zip>..\Proxy\PlugBotSharp.GenshinProxy\bin\$(Configuration)\$(TargetFramework)\PlugBotSharp.GenshinProxy.zip</Zip>
+    <DeployComponent Include="Components\gscoreproxy">
+      <Zip>..\Proxy\PlugBotSharp.GsCoreProxy\bin\$(Configuration)\$(TargetFramework)\PlugBotSharp.GsCoreProxy.zip</Zip>
     </DeployComponent>
   </ItemGroup>
 
-  <!-- 构建完把组件解压到输出目录，直接就能跑 -->
+  <!--
+    构建完把组件覆盖解压到输出目录，直接就能跑。
+    运行目录里的 Nugets / Configs / Instances / Certs / Logs 是运行时数据，这里一个都不删，
+    免得每次构建都要重新下载 NuGet 包。
+  -->
   <Target Name="DeployComponents" AfterTargets="Build">
     <Error Condition="!Exists('%(DeployComponent.Zip)')" Text="组件包不存在：%(DeployComponent.Zip)，先构建组件工程" />
-    <RemoveDir Directories="$(OutDir)%(DeployComponent.Identity)" />
+    <MakeDir Directories="$(OutDir)%(DeployComponent.Identity)" />
     <Unzip SourceFiles="%(DeployComponent.Zip)" DestinationFolder="$(OutDir)%(DeployComponent.Identity)" />
   </Target>
 

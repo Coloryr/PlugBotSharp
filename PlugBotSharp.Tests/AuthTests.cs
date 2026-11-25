@@ -1,4 +1,4 @@
-﻿using PlugBotSharp.Core.Auth;
+using PlugBotSharp.Core.Auth;
 
 namespace PlugBotSharp.Tests;
 

@@ -109,11 +109,11 @@ internal static class CallbackHandler
             return;
         }
 
-        var replies = ComponentApi.DispatchMessage(message);
+        var replies = instance.Dispatch(message);
 
         foreach (var reply in replies)
         {
-            await instance.SendAsync(message, reply);
+            await instance.Send(message, reply);
         }
     }
 

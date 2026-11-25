@@ -13,12 +13,23 @@
 | `Plugin/` | `DemoPlugin` | 示例插件：演示消息事件和各类消息体 |
 | `Proxy/` | `PlugBotSharp.QQProxy` | 官方 QQ 通信代理组件，依赖 `qqlib` |
 | `Proxy/` | `PlugBotSharp.OneBotProxy` | OneBot 11 / 12 通信代理组件，依赖 `onebotlib` |
-| `Proxy/` | `PlugBotSharp.GenshinProxy` | gsuid_core 通信代理组件：把平台消息单向推给 core |
+| `Proxy/` | `PlugBotSharp.GsCoreProxy` | gsuid_core 通信代理组件（id `gscoreproxy`）：和 core 双向收发 |
 | 根目录 | `PlugBotSharp.Run` | 启动入口，运行目录为程序所在目录 |
 | 根目录 | `PlugBotSharp.Web` | Vue 3 + Vite 管理面板 |
 | 根目录 | `PlugBotSharp.Tests` | xUnit 测试 |
 | `build/` | `MetaGen` | 从 `Meta.cs` 生成 `Meta.json` 的工具（可打包成 NuGet） |
 | `build/` | `ComponentPackage.targets` | 组件打包：生成清单并把清单里声明的 dll 打成一个 zip |
+
+`PlugBotSharp.Core` 内部按职责分目录，命名空间还是 `PlugBotSharp.Core`，组件里的 `using` 不用改：
+
+| 目录 | 放什么 |
+| --- | --- |
+| `Components/` | 组件装载和生命周期：`IComponent`、`ComponentLoader`、`ComponentManager`、`ComponentInstaller`、`InstanceManager`、`StateManager`、`BaseAssembly` |
+| `Register/` | 注册阶段的注册器和句柄：`IRegister`、`ComponentRegister`、`RaiseHandle`、`StateHandle`、`SendHandle`、`ProxyEventHandle` |
+| `Events/` | 事件中心：`EventManager`、`MessageEvent`、`PluginEvent`、`ProxyEvent`、`PluginEventName` |
+| 其他 | `Auth/`、`Configs/`、`Http/`、`Lib/`、`Messages/`、`Nuget/`、`Plugin/`、`Proxy/`，命名空间和目录同名 |
+
+根目录放宿主入口和小工具：`BotManager`（启动 / 加载）、`ConsoleManager`（控制台指令）、`HttpManager`（管理面板）、`ComponentApi`（组件能调的宿主接口）、`CertStore`（证书仓库）、`Ed25519`（签名校验）、`I18`（多语言）。
 
 ## 组件清单
 
@@ -73,7 +84,7 @@
 | `IComponent : IBaseComponent` | `Init(string path)` |
 | `IBasePlugin : IComponent` | `RegisterEventHook()` |
 | `IBaseProxy : IComponent` | `CreateInstance()` `Reload(IProxyInstasnce)` |
-| `IProxyInstasnce : IBaseComponent` | `Init(path, uuid)` `RegisterEventHook()` `Tick()` |
+| `IProxyInstasnce : IBaseComponent` | `Init(path, uuid)` `RegisterEventHook()` `Tick()` `SendAsync(ProxyMessage, BaseMessage)` |
 | `IBaseLib` | `Init` `Load` `Unload`（运行库不参与启停） |
 
 - 启停方法都是同步的 `bool`，`Reload`、`UpdateMap`、`RegisterEventHook` 返回 `void`
@@ -101,36 +112,100 @@
 
 ## 事件
 
-事件注册统一走 `ComponentApi`，而且只能在 `RegisterEventHook()` 里注册（插件和实例都有这个方法），组件卸载时宿主会自动摘掉它的全部注册。`EventManager` 是宿主内部类，组件拿不到。
+事件只能在上 `RegisterEventHook(IRegister register)` 阶段处理（插件、代理和实例都有这个方法），注册器出了这个阶段就关闭，再调会抛异常。宿主会在 `Load` 之后调一次，组件卸载时按 owner 自动摘掉全部注册。`EventManager` 是宿主内部类，组件拿不到。
 
-| 事件 | 注册 | 触发 |
+`IRegister` 的方法分三类，看名字就能分清：
+
+| 类别 | 方法 | 说明 |
 | --- | --- | --- |
-| 消息事件 | `ComponentApi.RegisterMessageHook(owner, Func<ProxyMessage, List<BaseMessage>>)` | 代理收到消息后调用 `ComponentApi.DispatchMessage(msg)`，返回值就是要回复的消息 |
-| Proxy 事件 | `ComponentApi.RegisterProxyHook(owner, Action<ProxyEvent>)` | 实例启用 / 停用时广播 `Started` / `Stopped` |
-| 插件事件 | `ComponentApi.RegisterPluginHook(owner, Action<PluginEvent>)` | 插件 `Load` / `Enable` / `Disable` / `Unload` 时广播；`ComponentApi.RaisePlugin(id, name, data)` 是插件之间自定义的事件 |
-| 发送钩子 | `ComponentApi.RegisterSendHook(owner, Func<ProxyMessage, BaseMessage, Task>)` | 组件之间转发消息用：`ComponentApi.SendAsync(context, message)` 交给所有实例，目标实例按 `context.Uuid` 自己过滤 |
+| 注册：把自己的东西暴露出去 | `RegisterPluginEvent(string eventId)` | 返回 `RaiseHandle`，事件全名 `[组件id]事件id`，别的组件按名字订阅 |
+| | `RegisterHttpPath(Func<HttpContext, Task>)` | 插件 / 代理是 `/api/{组件id}`，实例是 `/api/{组件id}/{实例uuid}` |
+| 订阅：接收别人的事件 | `SubscribeMessage(Func<ProxyMessage, List<BaseMessage>>)` | 代理收到消息后调 `ProxyEventHandle.Dispatch(msg)`，返回值就是要回复的消息 |
+| | `SubscribeMessage(Func<MessageEvent, Task>)` | 长任务版：回调在后台跑，不阻塞代理，处理完 `await e.Reply(msg)` 把消息发回发起方 |
+| | `SubscribeProxy(Action<ProxyEvent>)` | 实例启用 / 停用时广播 `Started` / `Stopped` |
+| | `SubscribePlugin(Action<PluginEvent>)` | 广播订阅：生命周期事件和**所有**自定义事件 |
+| | `SubscribePluginEvent(string name, Action<PluginEvent>)` | 定向订阅：只收这个名字的自定义事件，`name` 是 `[组件id]事件id` |
+| | `SubscribePluginEvent(string componentId, string eventId, Action<PluginEvent>)` | 定向订阅的另一种写法，用 id 拼名字；两个 id 都可以写 `*` 通配 |
+| | `SubscribeSendFilter(Func<ProxyMessage, BaseMessage, Task<bool>>)` | 发送前拦截：消息发到真实平台之前调用，返回 `true` 取消这次发送，插件用来屏蔽消息 |
+| 句柄：注册后随时用 | `RegisterState(string name)` | 返回 `StateHandle`，`Set(value)` 更新、`Remove()` 删掉，面板上显示成标签 |
+| | `RegisterProxyEvent()` | 返回 `ProxyEventHandle`，代理把收到的消息 `Dispatch(msg)` 注入进来，自动分发给所有订阅消息事件的组件并收集回复；**只有代理 / 实例能调用** |
+| | `RegisterSend()` | 返回 `SendHandle`，插件用它给指定实例发消息；代理 / 实例拿到的句柄填自己的代理 id 会直接抛异常 |
 
 ```csharp
-public void RegisterEventHook()
+public void RegisterEventHook(IRegister register)
 {
-    ComponentApi.RegisterMessageHook(this, msg => msg.Message is TextMessage text
+    register.SubscribeMessage(msg => msg.Message is TextMessage text
         ? [new TextMessage("收到：" + text.Text)]
         : []);
 
-    ComponentApi.RegisterPluginHook(this, e =>
+    // 长任务版：慢活放后台，做完自己发回去，代理不会等着
+    register.SubscribeMessage(async e =>
     {
-        if (e.Type == PluginEventType.Custom && e.Name == "ping")
-        {
-            // 处理其他插件发来的事件
-        }
+        await Task.Delay(3000);
+
+        await e.Reply(new TextMessage("算完了"));
     });
+
+    // 注册自定义事件，全名 [demo]ping，拿着句柄随时触发
+    _ping = register.RegisterPluginEvent("ping");
+
+    // 定向订阅：只收 [demo]ping，直接用注册时拿到的全名，不用写死字符串
+    register.SubscribePluginEvent(_ping.Name, e =>
+    {
+        // 只有 [demo]ping 会进来
+    });
+
+    // 等价写法，跨组件订阅时知道对方的 id 和事件 id 就行
+    register.SubscribePluginEvent("demo", "ping", e =>
+    {
+    });
+
+    // 通配：所有组件的 ping / demo 的所有事件 / 所有自定义事件
+    register.SubscribePluginEvent("*", "ping", e => { });
+    register.SubscribePluginEvent("demo", "*", e => { });
+    register.SubscribePluginEvent("*", "*", e => { });
+
+    // 广播订阅：生命周期事件和所有自定义事件都会进来
+    register.SubscribePlugin(e =>
+    {
+    });
+
+    // 发送前拦截：返回 true 这条消息就不会发到平台
+    register.SubscribeSendFilter((context, message) =>
+    {
+        return Task.FromResult(message is TextMessage text && text.Text.Contains("敏感词"));
+    });
+
+    // 状态句柄，之后随时更新
+    _replies = register.RegisterState("replies");
+
+    // 收到消息后交给插件；要给某个实例发消息用 _send.SendAsync(...)
+    _dispatch = register.RegisterProxyEvent();
+    _send = register.RegisterSend();
 }
+
+// 任意时刻，事件数据只能是基础类型、JsonNode 或 BaseMessage
+_ping.Raise("demo");
+_ping.Raise(42);
+_ping.Raise(new JsonObject { ["value"] = 1 });
+_ping.Raise(new TextMessage("带一条消息"));
 ```
 
-- 多个插件都返回消息时按注册顺序拼起来，由调用 `DispatchMessage` 的代理负责发送
+- 两种订阅可以同时挂，互不影响：广播订阅连自定义事件一起收，定向订阅只收匹配的自定义事件、收不到生命周期事件
+- 定向订阅的两个 id 支持 `*`：`("demo", "*")` 收 demo 的全部事件，`("*", "ping")` 收所有组件的 ping，`("*", "*")` 等于只收全部自定义事件
+- 事件数据只能是**基础类型**（`string` / `bool` / `int` / `long` / `double`）、`JsonNode` 或 `BaseMessage`，`RaiseHandle` 对这些各有一个重载，没数据直接 `Raise()`；组件自定义的类型编译期就传不进来
+- 原因：每个组件在自己的 `AssemblyLoadContext` 里，传自定义对象会把它的类型和程序集带进别的组件，订阅方只要还拿着这个对象，卸载时就回收不掉
+- 订阅方从 `PluginEvent.Data`（`JsonNode?`）取值或者 `Deserialize` 成自己的类型，结构化数据拼 `JsonObject` / `JsonArray`；带消息的事件看 `PluginEvent.Message`（`BaseMessage?`），两者二选一
+- 事件名可以用 `PluginEventName.Build(组件id, 事件id)` 拼，`PluginEventName.TryParse(name, out var id, out var eventId)` 拆；名字必须是 `[组件id]事件id`，否则订阅时直接抛 `ArgumentException`
+- 同一个 owner 重复订阅同一个回调只算一次
+- 多个插件都返回消息时按注册顺序拼起来，由调 `ProxyEventHandle.Dispatch` 的代理负责发送
+- `RegisterProxyEvent` 只给代理 / 实例用：插件注册直接抛 `组件 {0} 不是代理，不能注册代理事件`
+- 回复也走同一条发送链路：代理发回复前先过所有拦截器，任何一个返回 `true` 就不发；拦截器抛异常只记日志，不影响发送
+- 拦截器全部放行后，宿主按 `context.Uuid` 找到目标实例，直接调它的 `IProxyInstasnce.SendAsync(message, reply)`，代理不需要注册发送回调
+- 长任务版的消息回调是后台跑的，`MessageEvent.Reply` 用的是原始 `ProxyMessage` 的 `Id` / `Uuid`，所以任务结束后回复照样发给发起这次分发的那个实例，也能被其他插件拦截
 - 某个回调抛异常只记日志，不影响其他回调
-- `ProxyMessage` 带 `Id`（代理 id）、`Uuid`（实例）、`SenderType` / `Sender` / `Target`（回复目标）和消息内容，被动回复要用的 `ReplyId` / `ReplyEventId` 也在这里
-- 实例要收别的代理的消息，也是在 `RegisterEventHook()` 里注册消息事件，回调里用自己的传输发
+- `ProxyMessage` 带 `Id`（代理 id）、`Uuid`（实例）、`SenderType` / `Sender` / `Target` 和消息内容，被动回复要用的 `ReplyId` / `ReplyEventId` 也在这里
+- 实例要收别的代理的消息，也是订阅消息事件，回调里用自己的传输发
 
 ## 通用消息
 
@@ -186,7 +261,7 @@ return [new RawMessage(QQMessage.SendName, JsonSerializer.SerializeToNode(obj, Q
 - 群消息的 `ProxyMessage`：`SenderType = Group`、`Sender = member_openid`、`Target = group_openid`、`ReplyId = 平台消息 id`；单聊的 `Target` 为空，回复时用 `Sender`
 - 内容里的 `<@!id>` / `<qqbot-at-user .../>` 会被去掉，附件按 `content_type` 转成 `ImageUrlMessage` 或 `FileUrlMessage`，有文字时合成 `ListMessage`
 - 回复走被动回复：带 `msg_id`（`ReplyId`）和按消息 id 自增的 `msg_seq`，群里发到 `v2/groups/{group_openid}/messages`，单聊发到 `v2/users/{openid}/messages`
-- `HookType` 三种模式：`WebHook` 注册到宿主（`/api/qq/{实例uuid}`）；`WebHost` 自己起 Kestrel，监听实例配置里的 `Port`；`WebSocket` 还没实现
+- `HookType` 三种模式：`WebHook` 注册到宿主（`/api/qqproxy/{实例uuid}`）；`WebHost` 自己起 Kestrel，监听实例配置里的 `Port`；`WebSocket` 还没实现
 
 ## OneBot 代理
 
@@ -273,18 +348,22 @@ new ServerOptions
 - 证书本身要带 Server Authentication 用途（IIS 导出的证书默认就带），否则 Kestrel 会拒绝启动
 - 想知道有哪些证书可用：`CertStore.Names()` 拿名字列表，`CertStore.List()` 拿带路径和密码的完整信息
 
-## Genshin 代理
+## GsCore 代理
 
-`gsuid_core`（SayuCore）把原神功能跑在独立进程里，这个代理只负责**把平台消息单向推给 core**，不处理 core 下发的消息：
+`gsuid_core`（SayuCore）把原神功能跑在独立进程里，`PlugBotSharp.GsCoreProxy`（组件 id `gscoreproxy`）和 core 双向收发：
 
 ```
-QQ / OneBot 实例 ──消息事件──▶ Genshin 代理 ──MessageReceive──▶ gsuid_core
+QQ / OneBot 实例 ──消息事件──▶ GsCore 代理 ──MessageReceive──▶ gsuid_core
+                                GsCore 代理 ◀──MessageReceive── gsuid_core
 ```
 
 - 连的是 `{Url}/ws/{BotId}`，有 `Token` 就带上 `?token=`；断线由 `Tick` 按 `ReconnectSeconds` 重连
-- 在 `RegisterEventHook()` 里订阅所有平台的消息事件，转成 `MessageReceive`（文本、@、图片、语音、视频、markdown、引用），按 `group/direct` 填 `user_type`
-- 消息段：`text` / `at` / `image` / `file` / `record` / `video` / `markdown` / `reply_id`，媒体用 `link://` 或 `base64://`，平台私有段用 `RawMessage("genshin.segment")` 直通
-- 只发不收：收到 core 的报文会读掉但不做处理，避免缓冲区堆积
+- 发：在 `RegisterEventHook()` 里订阅所有平台的消息事件，转成 `MessageReceive`（文本、@、图片、语音、视频、markdown、引用），按 `group/direct` 填 `user_type`
+- 收：core 下发的报文按 `GsMessageReceive` 解析，`content` 的段还原成统一消息（`text` / `at` / `image` / `record` / `video` / `file` / `markdown` / `reply_id` / `json` / `xml`，认不出的段包成 `RawMessage("genshin.segment")`），再拼成 `ProxyMessage`：`user_type` 决定 `SenderType`（group / channel / 其余当私聊），`Sender` 用 `user_id`，`Target` 用 `group_id`，`ReplyId` 用 `msg_id`
+- 消息段：媒体用 `link://` 或 `base64://`，base64 图片读进内存，语音 / 视频 / 文件落临时文件
+- 收到就注入：`GenshinInstance.OnReceived` 把 core 的消息转成 `ProxyMessage` 后用 `RegisterProxyEvent()` 的句柄 `Dispatch` 出去，所有订阅消息事件的插件都会收到，收到的条数记在实例状态 `recv` 上
+- 回复回 core：插件返回的消息走 `_send.SendAsync` → 拦截器 → 实例的发送实现 → `MessageReceive` 发回 core，和 QQ / OneBot 的回复是同一条链路
+- 回环保护：`Forward` 只转发别的代理的消息，自己 `Dispatch` 出去的消息不会再转一遍
 
 | 配置 | 说明 |
 | --- | --- |
@@ -297,14 +376,11 @@ QQ / OneBot 实例 ──消息事件──▶ Genshin 代理 ──MessageRecei
 
 ## 组件里注册 http 接口
 
-## 组件里注册 http 接口
-
 回调是 `Func<HttpContext, Task>`，宿主会 `await` 它：
 
 ```csharp
-ComponentApi.RegisterHttpPath(plugin, HandleAsync);    // /api/{组件id}
-ComponentApi.RegisterHttpPath(proxy, HandleAsync);     // /api/{组件id}
-ComponentApi.RegisterHttpPath(instance, HandleAsync);  // /api/{组件id}/{实例uuid}
+// 只能在 RegisterEventHook 阶段注册
+register.RegisterHttpPath(HandleAsync);    // 插件 / 代理是 /api/{组件id}，实例是 /api/{组件id}/{实例uuid}
 
 static async Task HandleAsync(HttpContext ctx)
 {
@@ -321,6 +397,22 @@ ComponentApi.UnregisterHttpPath(instance);
 - 回调里的异常由宿主捕获，记日志并返回 500（响应已经开始时只记日志）
 - `UnregisterHttpPath` 返回是否真的移除了注册；只有注册者一致才移除，重复调用返回 `false`，组件已经卸载也能调用
 - 禁用或卸载时对应接口会自动移除，手动取消注册用来提前关掉接口
+
+## 自定义状态
+
+组件可以把运行时状态上报给面板，组件列表 / 实例列表里会显示成小标签：
+
+```csharp
+// 注册阶段拿句柄，之后随时更新
+_replies = register.RegisterState("replies");
+_replies.Set(count.ToString());
+```
+
+- 状态按组件对象存（插件 / 代理 / 实例各一份），同名覆盖，值统一用字符串
+- 句柄一直留着用，注册阶段结束后照样能 `Set` / `Remove`；再调 `RegisterState` 才会抛异常
+- 面板接口 `GET /api/admin/components` 和 `GET /api/admin/instances` 的 `states` 字段就是这些键值
+- 组件卸载、实例删除时宿主会清掉它上报的状态
+- `DemoPlugin` 用回复计数做了示例：每回一条就更新 `replies`
 
 ## 组件和实例的设置
 
@@ -414,16 +506,11 @@ dotnet build PlugBotSharp.slnx
 dotnet test PlugBotSharp.Tests
 ```
 
+构建完 `PlugBotSharp.Run/bin/Debug/net10.0` 就是一个**完整的运行目录**：宿主 dll 在根上，七个组件已经解压到 `Components/{组件id}`，直接双击 `PlugBotSharp.Run.exe` 就能跑（`Run` 工程的 `DeployComponents` 目标负责解压，组件只参与构建、不进引用）。
+
+这个目录同时就是运行目录，`Nugets`、`Configs`（面板账户、组件配置）、`Instances`、`Config.json`、`Logs` 都是运行时数据。构建只覆盖解压 `Components/{组件id}`，不删这些目录，所以重新构建、重启都不会丢账户，也不会重新下载 NuGet 包。
+
 前端：
-
-```bash
-cd PlugBotSharp.Web
-npm install
-npm run dev     # http://127.0.0.1:5173，/api 代理到 10000
-npm run build   # 产物在 dist，编译 Core 时会自动嵌入 dll
-```
-
-编译 Core 默认会执行前端构建，`-p:BuildAdminPanel=false` 可以跳过。
 
 测试里不允许依赖真实程序集，组件用 `PlugBotSharp.Tests` 里的假实现；测试之间会清空事件注册和组件字典，不要假设顺序。
 

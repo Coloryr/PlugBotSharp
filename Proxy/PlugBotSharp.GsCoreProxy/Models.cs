@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace PlugBotSharp.GenshinProxy;
+namespace PlugBotSharp.GsCoreProxy;
 
 /// <summary>
 /// 一段消息，对应 gsuid_core 的 Message(type, data)
@@ -44,6 +44,16 @@ public record GsMessageReceive
     /// </summary>
     [JsonPropertyName("user_type")]
     public string UserType { get; set; } = "group";
+    /// <summary>
+    /// core 发出来的消息用 target_type / target_id 标目标，和 user_type 同值
+    /// </summary>
+    [JsonPropertyName("target_type")]
+    public string? TargetType { get; set; }
+    /// <summary>
+    /// core 发出来的消息的目标 id，群号 / 用户 id
+    /// </summary>
+    [JsonPropertyName("target_id")]
+    public string? TargetId { get; set; }
     [JsonPropertyName("group_id")]
     public string? GroupId { get; set; }
     [JsonPropertyName("user_id")]

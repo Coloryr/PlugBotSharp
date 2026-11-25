@@ -2,6 +2,7 @@ using DemoPlugin;
 using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Core.Http;
 using PlugBotSharp.QQLib;
 
 namespace PlugBotSharp.Tests;
@@ -86,6 +87,32 @@ public class DemoPluginTests : ComponentTestBase
     }
 
     [Fact]
+    public void Reply_count_is_reported_as_state()
+    {
+        var plugin = new PluginMain();
+
+        Send("/text", plugin);
+        Send("/text", plugin);
+
+        Assert.Equal("2", StateRegistry.Get(plugin)["replies"]);
+    }
+
+    [Fact]
+    public void Event_command_raises_the_custom_event()
+    {
+        var plugin = new PluginMain();
+
+        var reply = Assert.Single(Send("/event", plugin));
+        Assert.Equal("事件已触发", Assert.IsType<TextMessage>(reply).Text);
+
+        var states = StateRegistry.Get(plugin);
+
+        // 定向订阅只收 [demo]ping，广播订阅连生命周期事件一起收
+        Assert.Equal("1", states["pings"]);
+        Assert.Equal("1", states["events"]);
+    }
+
+    [Fact]
     public void Unknown_command_is_ignored()
     {
         Assert.Empty(Send("/nothing"));
@@ -97,7 +124,7 @@ public class DemoPluginTests : ComponentTestBase
     private static List<BaseMessage> Send(string text, PluginMain? plugin = null, string? replyId = null)
     {
         plugin ??= new PluginMain();
-        plugin.RegisterEventHook();
+        plugin.RegisterEventHook(new ComponentRegister(plugin, "demo"));
 
         try
         {

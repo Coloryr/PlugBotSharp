@@ -196,7 +196,7 @@ public static class BotManager
         {
             FileName = Path.Combine(LogsPath, "${date:format=yyyy-MM-dd}.log"),
             // 带上异常堆栈，否则出错时只有一行消息
-            Layout = "[${longdate}][${level:uppercase=true}][${logger}]${message}${onexception:${newline}${exception:format=ToString}}${newline}",
+            Layout = "[${longdate}][${level:uppercase=true}][${logger}]${message}${onexception:${newline}${exception:format=ToString}}",
             KeepFileOpen = true,
             CreateDirs = true
         };

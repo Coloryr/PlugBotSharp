@@ -1,4 +1,6 @@
+using PlugBotSharp.Core;
 using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Core.Messages;
 using PlugBotSharp.Core.Proxy;
 
 namespace PlugBotSharp.Tests;
@@ -12,6 +14,16 @@ internal sealed class FakeProxy : IBaseProxy
     public int DisableCount { get; private set; }
     public int ReloadCount { get; private set; }
     public int InstanceReloadCount { get; private set; }
+
+    /// <summary>
+    /// 注册阶段拿到的注册器
+    /// </summary>
+    public IRegister? Register { get; private set; }
+
+    public void RegisterEventHook(IRegister register)
+    {
+        Register = register;
+    }
 
     public bool Init(string path) => true;
 
@@ -105,15 +117,39 @@ internal sealed class FakeInstance : IProxyInstasnce
         return true;
     }
 
-    public void RegisterEventHook()
+    /// <summary>
+    /// 注册阶段拿到的注册器
+    /// </summary>
+    public IRegister? Register { get; private set; }
+
+    public void RegisterEventHook(IRegister register)
     {
         HookCount++;
+        Register = register;
     }
 
     public bool Unload() => true;
 
     public void Tick()
     {
+    }
+
+    /// <summary>
+    /// 最近一次收到的发送请求
+    /// </summary>
+    public ProxyMessage? LastSend { get; private set; }
+
+    /// <summary>
+    /// 最近一次要发的消息
+    /// </summary>
+    public BaseMessage? LastReply { get; private set; }
+
+    public Task SendAsync(ProxyMessage message, BaseMessage reply)
+    {
+        LastSend = message;
+        LastReply = reply;
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

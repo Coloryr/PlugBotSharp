@@ -2,7 +2,7 @@ using NLog;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Proxy;
 
-namespace PlugBotSharp.GenshinProxy;
+namespace PlugBotSharp.GsCoreProxy;
 
 public class ProxyMain : IBaseProxy
 {
@@ -20,13 +20,18 @@ public class ProxyMain : IBaseProxy
     /// <inheritdoc/>
     public bool Init(string path)
     {
-        _logger = LogManager.GetLogger("Genshin");
+        _logger = LogManager.GetLogger("GsCore");
         _logger.Info(GenshinLang.Get(GenshinLangKey.Init));
 
         _path = path;
         LoadConfig();
 
         return true;
+    }
+
+    /// <inheritdoc/>
+    public void RegisterEventHook(PlugBotSharp.Core.IRegister register)
+    {
     }
 
     /// <inheritdoc/>

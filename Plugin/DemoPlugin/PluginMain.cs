@@ -17,6 +17,11 @@ public class PluginMain : IBasePlugin
     /// </summary>
     private string _text = "这是一条文本消息";
 
+    /// <summary>
+    /// 已经回复过多少条，作为自定义状态上报给面板
+    /// </summary>
+    private int _replies;
+
     /// <inheritdoc/>
     public bool Init(string path)
     {
@@ -34,10 +39,78 @@ public class PluginMain : IBasePlugin
     {
     }
 
+    /// <summary>
+    /// 自定义事件 [demo]ping
+    /// </summary>
+    private RaiseHandle? _ping;
+
+    /// <summary>
+    /// 收到插件事件的次数（生命周期 + 自定义），作为状态上报
+    /// </summary>
+    private int _events;
+
+    /// <summary>
+    /// 收到自定义事件 [demo]ping 的次数，作为状态上报
+    /// </summary>
+    private int _pings;
+
+    /// <summary>
+    /// 状态句柄，注册阶段拿到，之后随时更新
+    /// </summary>
+    private StateHandle? _pingState;
+
+    private StateHandle? _eventState;
+
+    private StateHandle? _replyState;
+
+    private StateHandle? _blockedState;
+
+    /// <summary>
+    /// 被拦截器拦下的消息条数
+    /// </summary>
+    private int _blocked;
+
     /// <inheritdoc/>
-    public void RegisterEventHook()
+    public void RegisterEventHook(IRegister register)
     {
-        ComponentApi.RegisterMessageHook(this, HandleMessage);
+        register.SubscribeMessage(HandleMessage);
+
+        // 注册自定义事件，名字是 [demo]ping
+        _ping = register.RegisterPluginEvent("ping");
+
+        // 注册状态，句柄留着随时更新
+        _pingState = register.RegisterState("pings");
+        _eventState = register.RegisterState("events");
+        _replyState = register.RegisterState("replies");
+        _blockedState = register.RegisterState("blocked");
+
+        // 发送前拦截：返回 true 就把这条消息丢掉，不发给真实平台
+        register.SubscribeSendFilter((_, reply) =>
+        {
+            if (reply is TextMessage text && text.Text.Contains("拦截"))
+            {
+                _blocked++;
+                _blockedState?.Set(_blocked.ToString());
+
+                return Task.FromResult(true);
+            }
+
+            return Task.FromResult(false);
+        });
+
+        // 定向订阅：只收 [demo]ping，直接用注册时拿到的全名，不写死字符串
+        register.SubscribePluginEvent(_ping.Name, e =>
+        {
+            _pings++;
+            _pingState?.Set(_pings.ToString());
+        });
+
+        // 广播订阅：生命周期事件和所有自定义事件都收
+        register.SubscribePlugin(e =>
+        {
+            _events++;
+            _eventState?.Set(_events.ToString());
+        });
     }
 
     /// <inheritdoc/>
@@ -93,7 +166,7 @@ public class PluginMain : IBasePlugin
             return [];
         }
 
-        return text.Text.Trim().ToLowerInvariant() switch
+        var replies = text.Text.Trim().ToLowerInvariant() switch
         {
             "/text" => [new TextMessage(_text)],
             "/markdown" => [new MarkdownMessage("**DemoPlugin**\n> 这是一条 markdown 消息")],
@@ -101,8 +174,29 @@ public class PluginMain : IBasePlugin
             "/card" => [ToRaw(BuildCard())],
             "/list" => [new ListMessage(new TextMessage("第一条"), new TextMessage("第二条"))],
             "/reply" => BuildReply(message),
+            "/event" => BuildEvent(),
+            "/block" => [new TextMessage("这条消息会被拦截器拦下")],
             _ => []
         };
+
+        if (replies.Count > 0)
+        {
+            _replies += replies.Count;
+            _replyState?.Set(_replies.ToString());
+        }
+
+        return replies;
+    }
+
+    /// <summary>
+    /// 触发自己的自定义事件
+    /// </summary>
+    private List<BaseMessage> BuildEvent()
+    {
+        // 事件数据只能是基础类型或 JsonNode，别传组件自己的对象
+        _ping?.Raise("demo");
+
+        return [new TextMessage("事件已触发")];
     }
 
     /// <summary>

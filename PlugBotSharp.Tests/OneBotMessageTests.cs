@@ -122,6 +122,18 @@ public class OneBotMessageTests
     }
 
     [Fact]
+    public void In_memory_image_becomes_a_base64_segment()
+    {
+        using var stream = new MemoryStream([1, 2, 3, 4]);
+
+        var segments = OneBotMessage.ToSegments(new ImageMessage(stream, ImageType.Png));
+
+        var image = Assert.Single(segments);
+        Assert.Equal("image", image!["type"]!.GetValue<string>());
+        Assert.Equal("base64://" + Convert.ToBase64String([1, 2, 3, 4]), image["data"]!["file"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void Raw_segment_is_passed_through()
     {
         var raw = new RawMessage(OneBotMessage.SegmentName, JsonNode.Parse("""

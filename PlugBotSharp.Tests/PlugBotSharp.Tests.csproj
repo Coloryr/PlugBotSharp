@@ -23,7 +23,7 @@
     <ProjectReference Include="..\Proxy\PlugBotSharp.QQProxy\PlugBotSharp.QQProxy.csproj" />
     <ProjectReference Include="..\Plugin\DemoPlugin\DemoPlugin.csproj" />
     <ProjectReference Include="..\Proxy\PlugBotSharp.OneBotProxy\PlugBotSharp.OneBotProxy.csproj" />
-    <ProjectReference Include="..\Proxy\PlugBotSharp.GenshinProxy\PlugBotSharp.GenshinProxy.csproj" />
+    <ProjectReference Include="..\Proxy\PlugBotSharp.GsCoreProxy\PlugBotSharp.GsCoreProxy.csproj" />
   </ItemGroup>
 
 </Project>
