@@ -104,6 +104,7 @@ PlugBotSharp.QQProxy.dll
 | 概览 | 运行时长、组件 / 实例数量、核心版本，组件 / 实例的实时状态面板，以及按对象分组的自定义状态监控卡片 |
 | 组件 | 组件列表、zip 安装、加载、卸载、启用、禁用、重载、删除、按类型筛选、设置 |
 | 实例 | 创建实例、加载、启用、禁用、重载、删除、设置 |
+| 调试 | 默认只测插件（代理不参与），可切换走代理链路；虚拟注入消息，同步 / 异步回复都列出来，图片可直接预览，不发到平台 |
 | 账户 | 添加账户、修改 / 重置密码、删除账户、查看和撤销登录会话 |
 
 ### 账户与安全
@@ -146,13 +147,14 @@ PlugBotSharp.QQProxy.dll
 - [第二章 完整插件制作](docs/chapters/ch02-plugin.md)：建工程、消息解析、消息发送、配置、状态、打包安装
 - [第三章 写一个代理](docs/chapters/ch03-proxy.md)
 - [第四章 写一个运行库](docs/chapters/ch04-lib.md)
-- [第五章 自定义事件](docs/chapters/ch05-events.md)
+- [第五章 事件系统](docs/chapters/ch05-events.md)：`IRegister`、消息 / 插件 / 代理事件、自定义事件
 - [第六章 配置文件](docs/chapters/ch06-config.md)
 - [第七章 自定义数据](docs/chapters/ch07-state.md)
 - [第八章 远程调试](docs/chapters/ch08-debug.md)
 - [第九章 依赖库和运行库](docs/chapters/ch09-deps.md)
 - [第十章 打包与发布](docs/chapters/ch10-package.md)
 - [第十一章 ComponentApi 进阶](docs/chapters/ch11-componentapi.md)：查 / 管别的组件和实例
+- [第十二章 RegisterHttpPath 与代理配合](docs/chapters/ch12-http.md)：对外接口、自建服务器（StartServer）、鉴权、接外部系统再走代理
 
 **参考手册**（按主题查）：
 

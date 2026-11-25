@@ -6,6 +6,7 @@ import OverviewView from './components/OverviewView.vue'
 import ComponentsView from './components/ComponentsView.vue'
 import InstancesView from './components/InstancesView.vue'
 import AccountsView from './components/AccountsView.vue'
+import DebugView from './components/DebugView.vue'
 import LoginView from './components/LoginView.vue'
 import SetupView from './components/SetupView.vue'
 import ToastHost from './components/ToastHost.vue'
@@ -14,6 +15,7 @@ const tabs = [
   { key: 'overview', label: '概览' },
   { key: 'components', label: '组件' },
   { key: 'instances', label: '实例' },
+  { key: 'debug', label: '调试' },
   { key: 'accounts', label: '账户' }
 ]
 
@@ -159,6 +161,7 @@ onBeforeUnmount(() => {
     <OverviewView v-if="tab === 'overview'" :overview="overview" />
     <ComponentsView v-else-if="tab === 'components'" />
     <InstancesView v-else-if="tab === 'instances'" />
+    <DebugView v-else-if="tab === 'debug'" />
     <AccountsView v-else />
 
     <div class="footer">

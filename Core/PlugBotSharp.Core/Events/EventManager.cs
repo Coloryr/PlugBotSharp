@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Messages;
 
 namespace PlugBotSharp.Core;
@@ -143,13 +144,19 @@ internal static class EventManager
     /// 处理消息事件，把所有插件的回复拼起来
     /// </summary>
     /// <param name="message">收到的消息，带发送者信息</param>
+    /// <param name="target">只发给这个所有者（插件 / 代理 / 实例），为空时发给所有人</param>
     /// <returns>要回复的消息</returns>
-    public static List<BaseMessage> HandleMessage(ProxyMessage message)
+    public static List<BaseMessage> HandleMessage(ProxyMessage message, object? target = null)
     {
         var result = new List<BaseMessage>();
 
         foreach (var hook in Snapshot(s_messages))
         {
+            if (target is not null && !ReferenceEquals(hook.Owner, target))
+            {
+                continue;
+            }
+
             try
             {
                 if (((Func<ProxyMessage, List<BaseMessage>>)hook.Handler)(message) is { Count: > 0 } replies)
@@ -170,6 +177,11 @@ internal static class EventManager
 
             foreach (var hook in Snapshot(s_messageTasks))
             {
+                if (target is not null && !ReferenceEquals(hook.Owner, target))
+                {
+                    continue;
+                }
+
                 _ = RunMessageHookAsync(hook, evt, message.Id);
             }
         }
@@ -217,6 +229,14 @@ internal static class EventManager
             {
                 BotManager.Logger?.Error(e, BotLang.GetLang(BotLangKey.EventProxyFail, message.Id));
             }
+        }
+
+        // 面板调试：发往调试终端的回复拦下来给面板，不落到真实平台
+        if (message.Uuid == DebugSink.Uuid)
+        {
+            DebugSink.Capture(reply);
+
+            return;
         }
 
         foreach (var hook in Snapshot(s_sends))

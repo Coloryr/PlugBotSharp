@@ -10,13 +10,14 @@
 | [第二章 · 完整插件制作](./chapters/ch02-plugin.md) | 从空目录建工程，到消息解析、消息发送、配置、状态、打包安装 |
 | [第三章 · 写一个代理](./chapters/ch03-proxy.md) | 收消息、Dispatch、发消息、实例配置、打包测试 |
 | [第四章 · 写一个运行库](./chapters/ch04-lib.md) | Lib 组件怎么写、怎么给别的组件用 |
-| [第五章 · 自定义事件](./chapters/ch05-events.md) | 注册、触发、订阅、通配、事件数据规则 |
+| [第五章 · 事件系统](./chapters/ch05-events.md) | `IRegister` 全貌：消息 / 插件 / 代理事件、自定义事件、拦截、句柄 |
 | [第六章 · 配置文件](./chapters/ch06-config.md) | ConfigMap 全类型、落盘、热重载 |
 | [第七章 · 自定义数据](./chapters/ch07-state.md) | 单值 / 键值状态、面板监控卡片 |
 | [第八章 · 远程调试](./chapters/ch08-debug.md) | 日志、面板、控制台、断点调试、排错顺序 |
 | [第九章 · 依赖库和运行库](./chapters/ch09-deps.md) | 组件依赖、NuGet 子依赖、native 库 |
 | [第十章 · 打包与发布](./chapters/ch10-package.md) | 打包、安装、更新、发布自查 |
 | [第十一章 · ComponentApi 进阶](./chapters/ch11-componentapi.md) | 查 / 管别的组件和实例、健康检查、给自己做面板 |
+| [第十二章 · RegisterHttpPath 与代理配合](./chapters/ch12-http.md) | 对外接口、自建服务器（StartServer）、鉴权、接外部系统再走代理 |
 
 ## 先选：写插件还是写代理
 

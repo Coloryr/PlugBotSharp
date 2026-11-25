@@ -579,7 +579,7 @@ internal static class ComponentLoader
     /// <summary>
     /// 加载 Meta.json 里声明的 dll，并找到指定接口的实现类型
     /// </summary>
-    private static Type? FindType(MetaObj meta, string folder, AssemblyLoadContext context, Type interfaceType, out string? error)
+    private static Type? FindType(MetaObj meta, string folder, ComponentLoadContext context, Type interfaceType, out string? error)
     {
         error = null;
 
@@ -601,7 +601,7 @@ internal static class ComponentLoader
                 return null;
             }
 
-            types.AddRange(context.LoadFromAssemblyPath(path).GetTypes());
+            types.AddRange(context.LoadFromFile(path).GetTypes());
         }
 
         var type = types.FirstOrDefault(t =>
@@ -743,6 +743,37 @@ internal sealed class ComponentLoadContext(string folder) : AssemblyLoadContext(
     /// </summary>
     private readonly Dictionary<string, IntPtr> s_natives = [];
 
+    /// <summary>
+    /// 从文件加载程序集，同目录有 pdb 就一起加载，断点调试和堆栈行号都靠它
+    /// </summary>
+    /// <param name="path">程序集路径</param>
+    internal Assembly LoadFromFile(string path)
+    {
+        var pdb = Path.ChangeExtension(path, ".pdb");
+
+        if (File.Exists(pdb))
+        {
+            try
+            {
+                using var assembly = File.OpenRead(path);
+                using var symbols = File.OpenRead(pdb);
+
+                var loaded = LoadFromStream(assembly, symbols);
+
+                BotManager.Logger?.Debug(BotLang.GetLang(BotLangKey.ComponentSymbolsLoaded, path, pdb));
+
+                return loaded;
+            }
+            catch (Exception e)
+            {
+                // 符号读不出来不影响组件本身
+                BotManager.Logger?.Warn(e, BotLang.GetLang(BotLangKey.ComponentSymbolsFail, path, e.Message));
+            }
+        }
+
+        return LoadFromAssemblyPath(path);
+    }
+
     protected override Assembly? Load(AssemblyName name)
     {
         // Core 由宿主提供，避免类型重复
@@ -761,7 +792,7 @@ internal sealed class ComponentLoadContext(string folder) : AssemblyLoadContext(
 
         if (File.Exists(path))
         {
-            return LoadFromAssemblyPath(path);
+            return LoadFromFile(path);
         }
 
         // 再找其他组件（Lib / Plugin / Proxy）

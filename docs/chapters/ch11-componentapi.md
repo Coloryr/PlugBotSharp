@@ -171,4 +171,4 @@ register.RegisterHttpPath(async ctx =>
 
 ---
 
-上一章：[第十章 · 打包与发布](ch10-package.md) ｜ [返回目录](../README.md) ｜ 下一章：无
+上一章：[第十章 · 打包与发布](ch10-package.md) ｜ [返回目录](../README.md) ｜ 下一章：[第十二章 · RegisterHttpPath 与代理配合](ch12-http.md)

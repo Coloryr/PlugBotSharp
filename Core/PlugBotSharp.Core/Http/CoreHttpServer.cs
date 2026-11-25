@@ -81,6 +81,7 @@ internal sealed class CoreHttpServer
         // 面板接口先注册，具体的路由比 /api/{**path} 优先
         AuthApi.Map(app);
         AdminApi.Map(app);
+        DebugApi.Map(app);
 
         app.MapGet("/api/status", Status);
         app.Map("/api/{**path}", Api);

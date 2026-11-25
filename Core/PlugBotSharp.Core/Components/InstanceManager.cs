@@ -83,6 +83,25 @@ internal static class InstanceManager
     }
 
     /// <summary>
+    /// 按 uuid 取实例对象，面板调试要单独发给某个实例时用
+    /// </summary>
+    /// <param name="uuid">实例 uuid</param>
+    /// <param name="instance">实例对象</param>
+    internal static bool TryGetObject(Guid uuid, out object? instance)
+    {
+        if (s_instances.TryGetValue(uuid, out var entry))
+        {
+            instance = entry.Instance;
+
+            return true;
+        }
+
+        instance = null;
+
+        return false;
+    }
+
+    /// <summary>
     /// 根据实例对象找它所属的代理和 uuid
     /// </summary>
     internal static bool TryGetInstance(IProxyInstasnce instance, out string proxyId, out string uuid)

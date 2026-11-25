@@ -38,6 +38,8 @@ internal enum BotLangKey
     ComponentEnableFail,
     ComponentDllMissing,
     ComponentDllsEmpty,
+    ComponentSymbolsLoaded,
+    ComponentSymbolsFail,
     ComponentDisabled,
     ComponentStateChanged,
     InstanceStateChanged,
@@ -229,6 +231,10 @@ internal static class BotLang
                 return "组件 {0} 初始化失败";
             case BotLangKey.ComponentEnableFail:
                 return "组件 {0} 启用失败";
+            case BotLangKey.ComponentSymbolsLoaded:
+                return "组件 {0} 已加载符号文件，断点调试可用";
+            case BotLangKey.ComponentSymbolsFail:
+                return "组件 {0} 的符号文件读不出来，只加载程序集: {1}";
             case BotLangKey.ComponentDllMissing:
                 return "dll 不存在: {0}";
             case BotLangKey.ComponentDllsEmpty:
@@ -524,6 +530,10 @@ internal static class BotLang
                 return "Component {0} init failed";
             case BotLangKey.ComponentEnableFail:
                 return "Component {0} enable failed";
+            case BotLangKey.ComponentSymbolsLoaded:
+                return "Symbols loaded for component {0}, breakpoints available";
+            case BotLangKey.ComponentSymbolsFail:
+                return "Failed to read symbols for component {0}, loading assembly only: {1}";
             case BotLangKey.ComponentDllMissing:
                 return "Dll not found: {0}";
             case BotLangKey.ComponentDllsEmpty:

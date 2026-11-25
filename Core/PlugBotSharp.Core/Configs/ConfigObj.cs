@@ -71,6 +71,42 @@ internal class AdminInstanceObj
 }
 
 /// <summary>
+/// 面板调试窗口注入的消息
+/// </summary>
+internal class DebugMessageObj
+{
+    /// <summary>
+    /// 注入范围：空是全部，plugin:{组件id} 只发给插件，instance:{实例uuid} 只发给实例
+    /// </summary>
+    public string Scope { get; set; } = "";
+
+    /// <summary>
+    /// 会话类型：group / user
+    /// </summary>
+    public string SenderType { get; set; } = "user";
+
+    /// <summary>
+    /// 发送者
+    /// </summary>
+    public string Sender { get; set; } = "";
+
+    /// <summary>
+    /// 回复目标
+    /// </summary>
+    public string Target { get; set; } = "";
+
+    /// <summary>
+    /// 被动回复 / 引用的消息 id
+    /// </summary>
+    public string ReplyId { get; set; } = "";
+
+    /// <summary>
+    /// 文本内容
+    /// </summary>
+    public string Text { get; set; } = "";
+}
+
+/// <summary>
 /// 证书清单（Certs/Certs.json）
 /// </summary>
 internal class CertFileObj
@@ -115,6 +151,7 @@ internal class CertItemObj
 [JsonSerializable(typeof(ChangePasswordReqObj))]
 [JsonSerializable(typeof(CertFileObj))]
 [JsonSerializable(typeof(CertItemObj))]
+[JsonSerializable(typeof(DebugMessageObj))]
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
 
