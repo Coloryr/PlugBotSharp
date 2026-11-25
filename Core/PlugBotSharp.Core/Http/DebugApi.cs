@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Core.Plugin;
+using PlugBotSharp.Core.Proxy;
 
 namespace PlugBotSharp.Core.Http;
 
@@ -20,6 +22,7 @@ internal static class DebugApi
 
         group.MapPost("/message", (Delegate)InjectMessage);
         group.MapGet("/replies", Replies);
+        group.MapPost("/reset", Reset);
         group.MapGet("/preview", Preview);
     }
 
@@ -84,8 +87,8 @@ internal static class DebugApi
             }
         }
 
-        // 新一轮调试，清掉上次截下来的回复
-        var since = DebugSink.Clear();
+        // 记下当前序号，异步回复从这之后算新的
+        var since = DebugSink.Current;
 
         var message = new ProxyMessage
         {
@@ -98,17 +101,23 @@ internal static class DebugApi
             Message = new TextMessage(obj.Text)
         };
 
-        var replies = EventManager.HandleMessage(message, target);
+        var collected = new List<(string Source, BaseMessage Message)>();
+
+        EventManager.HandleMessage(message, target, (owner, reply) => collected.Add((OwnerLabel(owner), reply)));
 
         return ApiUtil.Ok(new
         {
             injected = new { mode, proxy = proxyId, scope = obj.Scope ?? "", message.Sender, message.Target, message.ReplyId },
             since,
-            replies = replies.Select(x => new
-            {
-                type = x.Type.ToString(),
-                text = DebugSink.Describe(x)
-            }).ToList()
+            replies = collected
+                .SelectMany(x => DebugSink.Flatten(x.Message).Select(y => new { x.Source, Message = y }))
+                .Select(x => new
+                {
+                    type = x.Message.Type.ToString(),
+                    text = DebugSink.Describe(x.Message),
+                    source = x.Source
+                })
+                .ToList()
         });
     }
     /// <summary>
@@ -134,9 +143,20 @@ internal static class DebugApi
                 x.Type,
                 x.Text,
                 x.PreviewMime,
+                x.Source,
                 time = x.Time.ToString("HH:mm:ss")
             }).ToList()
         });
+    }
+
+    /// <summary>
+    /// 清空调试终端截下来的回复，面板上点「清空对话」时调
+    /// </summary>
+    private static IResult Reset()
+    {
+        DebugSink.Clear();
+
+        return ApiUtil.Ok();
     }
 
     /// <summary>
@@ -160,6 +180,22 @@ internal static class DebugApi
         ctx.Response.Headers.CacheControl = "no-store";
 
         return Results.File(data, "image/png");
+    }
+
+    /// <summary>
+    /// 回复的组件对象转成好认的名字，面板上显示谁回的
+    /// </summary>
+    /// <param name="owner">组件对象</param>
+    private static string OwnerLabel(object owner)
+    {
+        return owner switch
+        {
+            IBasePlugin plugin => ComponentManager.FindPluginId(plugin) ?? "plugin",
+            IBaseProxy proxy => ComponentManager.FindProxyId(proxy) ?? "proxy",
+            IProxyInstasnce instance when InstanceManager.TryGetInstance(instance, out var proxyId, out var uuid)
+                => proxyId + "/" + uuid[..8],
+            _ => owner.GetType().Name
+        };
     }
 
     /// <summary>

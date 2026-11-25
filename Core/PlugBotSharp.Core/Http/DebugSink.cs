@@ -24,6 +24,20 @@ internal static class DebugSink
     private static long s_seq;
 
     /// <summary>
+    /// 当前序号，面板拿它当轮询起点
+    /// </summary>
+    public static long Current
+    {
+        get
+        {
+            lock (s_lock)
+            {
+                return s_seq;
+            }
+        }
+    }
+
+    /// <summary>
     /// 开始新一轮调试，清掉上一轮的记录
     /// </summary>
     /// <returns>当前的序号</returns>
@@ -39,10 +53,46 @@ internal static class DebugSink
     }
 
     /// <summary>
-    /// 记一条发往调试终端的回复
+    /// 记一条发往调试终端的回复，列表消息会拆成多条分别记
     /// </summary>
     /// <param name="message">要发出的消息</param>
-    public static void Capture(BaseMessage message)
+    /// <param name="source">谁发的，组件 id 或者 代理/uuid</param>
+    public static void Capture(BaseMessage message, string source = "")
+    {
+        foreach (var item in Flatten(message))
+        {
+            CaptureOne(item, source);
+        }
+    }
+
+    /// <summary>
+    /// 把列表消息摊平，一条消息里塞文字和图片时，面板上分开显示更好看
+    /// </summary>
+    /// <param name="message">消息</param>
+    public static IEnumerable<BaseMessage> Flatten(BaseMessage message)
+    {
+        if (message is ListMessage list)
+        {
+            foreach (var child in list.Messages)
+            {
+                foreach (var item in Flatten(child))
+                {
+                    yield return item;
+                }
+            }
+
+            yield break;
+        }
+
+        yield return message;
+    }
+
+    /// <summary>
+    /// 记一条具体的回复
+    /// </summary>
+    /// <param name="message">要发出的消息</param>
+    /// <param name="source">谁发的</param>
+    private static void CaptureOne(BaseMessage message, string source)
     {
         var seq = ++s_seq;
         string? mime = null;
@@ -57,7 +107,7 @@ internal static class DebugSink
             }
         }
 
-        var reply = new CapturedReply(seq, message.Type.ToString(), Describe(message), mime, DateTime.Now);
+        var reply = new CapturedReply(seq, message.Type.ToString(), Describe(message), mime, source, DateTime.Now);
 
         lock (s_lock)
         {
@@ -133,5 +183,6 @@ internal static class DebugSink
 /// <param name="Type">消息类型</param>
 /// <param name="Text">内容摘要</param>
 /// <param name="PreviewMime">图片的 mime，非空表示可以取预览</param>
+/// <param name="Source">谁发的</param>
 /// <param name="Time">时间</param>
-internal sealed record CapturedReply(long Seq, string Type, string Text, string? PreviewMime, DateTime Time);
+internal sealed record CapturedReply(long Seq, string Type, string Text, string? PreviewMime, string Source, DateTime Time);

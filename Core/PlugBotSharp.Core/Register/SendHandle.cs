@@ -18,10 +18,16 @@ public sealed class SendHandle
     /// </summary>
     private readonly Guid? _ownUuid;
 
-    internal SendHandle(string? ownProxyId, Guid? ownUuid = null)
+    /// <summary>
+    /// 来源组件 id，调试面板上显示是谁发的
+    /// </summary>
+    internal string OwnerId { get; }
+
+    internal SendHandle(string? ownProxyId, Guid? ownUuid = null, string ownerId = "")
     {
         _ownProxyId = ownProxyId;
         _ownUuid = ownUuid;
+        OwnerId = ownerId;
     }
 
     /// <summary>
@@ -40,6 +46,6 @@ public sealed class SendHandle
             throw new InvalidOperationException(BotLang.GetLang(BotLangKey.SendToSelf, _ownProxyId));
         }
 
-        return EventManager.HandleSendAsync(context, message);
+        return EventManager.HandleSendAsync(context, message, OwnerId);
     }
 }

@@ -145,8 +145,9 @@ internal static class EventManager
     /// </summary>
     /// <param name="message">收到的消息，带发送者信息</param>
     /// <param name="target">只发给这个所有者（插件 / 代理 / 实例），为空时发给所有人</param>
+    /// <param name="onReply">每条回复的回调，参数是回复的组件对象，调试面板用它标来源</param>
     /// <returns>要回复的消息</returns>
-    public static List<BaseMessage> HandleMessage(ProxyMessage message, object? target = null)
+    public static List<BaseMessage> HandleMessage(ProxyMessage message, object? target = null, Action<object, BaseMessage>? onReply = null)
     {
         var result = new List<BaseMessage>();
 
@@ -162,6 +163,14 @@ internal static class EventManager
                 if (((Func<ProxyMessage, List<BaseMessage>>)hook.Handler)(message) is { Count: > 0 } replies)
                 {
                     result.AddRange(replies);
+
+                    if (onReply is not null)
+                    {
+                        foreach (var reply in replies)
+                        {
+                            onReply(hook.Owner, reply);
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -212,7 +221,8 @@ internal static class EventManager
     /// </summary>
     /// <param name="message">消息上下文，Uuid 是目标实例</param>
     /// <param name="reply">要发的消息</param>
-    public static async Task HandleSendAsync(ProxyMessage message, BaseMessage reply)
+    /// <param name="sourceId">发起的组件 id，调试面板用来标来源</param>
+    public static async Task HandleSendAsync(ProxyMessage message, BaseMessage reply, string sourceId = "")
     {
         foreach (var hook in Snapshot(s_sendFilters))
         {
@@ -234,7 +244,7 @@ internal static class EventManager
         // 面板调试：发往调试终端的回复拦下来给面板，不落到真实平台
         if (message.Uuid == DebugSink.Uuid)
         {
-            DebugSink.Capture(reply);
+            DebugSink.Capture(reply, sourceId);
 
             return;
         }

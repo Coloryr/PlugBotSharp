@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { notify } from '../toast'
 
@@ -13,36 +13,23 @@ const form = ref({
   sender: 'debug-user',
   target: 'debug-group',
   replyId: '',
-  text: '/text'
+  text: ''
 })
 
-const replies = ref([])
-const injected = ref(null)
+const messages = ref([])
 const error = ref('')
 const polling = ref(false)
 
+const listRef = ref(null)
 const presets = ['/text', '/markdown', '/card', '/list', '/reply', '/event', '/nothing']
 
 let since = 0
 let timer = null
 
-/**
- * 注入范围：全部 / 单个插件 / 单个实例
- */
-const scopeText = computed(() => {
-  if (!injected.value) {
-    return ''
-  }
+const scopeLabel = computed(() => {
+  const item = targets.value.find(x => x.value === form.value.scope)
 
-  if (injected.value.mode === 'plugin') {
-    return '单个插件'
-  }
-
-  if (injected.value.mode === 'instance') {
-    return '单个实例'
-  }
-
-  return '全部（插件 + 代理）'
+  return item ? item.label : '全部（插件 + 代理）'
 })
 
 /**
@@ -73,29 +60,41 @@ async function refresh() {
 }
 
 /**
- * 注入一条消息
+ * 注入一条消息，回复按聊天气泡追加
  */
 async function send() {
-  if (!form.value.text.trim()) {
-    notify('消息内容不能为空', 'bad')
+  const text = form.value.text.trim()
+
+  if (!text) {
     return
   }
 
   busy.value = true
-  replies.value = []
-  injected.value = null
   error.value = ''
 
   stopPolling()
 
+  // 先把自己发的那条放上去，再等回复
+  messages.value.push({
+    role: 'user',
+    type: form.value.senderType === 'group' ? '群聊' : '私聊',
+    text: text,
+    time: now()
+  })
+
+  form.value.text = ''
+
+  await scrollToBottom()
+
   try {
-    const res = await api.post('admin/debug/message', form.value)
+    const res = await api.post('admin/debug/message', { ...form.value, text })
     const data = res.data || {}
 
-    injected.value = data.injected || null
     since = data.since || 0
 
-    replies.value = (data.replies || []).map(item => ({ ...item, source: '同步' }))
+    for (const item of data.replies || []) {
+      pushReply(item, '同步')
+    }
 
     startPolling()
   } catch (e) {
@@ -103,6 +102,23 @@ async function send() {
   } finally {
     busy.value = false
   }
+}
+
+/**
+ * 追加一条回复气泡
+ */
+function pushReply(item, source, time) {
+  messages.value.push({
+    role: 'reply',
+    type: item.type,
+    text: item.text,
+    seq: item.seq,
+    previewMime: item.previewMime,
+    source: item.source || source,
+    time: time || now()
+  })
+
+  scrollToBottom()
 }
 
 /**
@@ -122,7 +138,11 @@ function startPolling() {
 
       for (const item of items) {
         since = Math.max(since, item.seq)
-        replies.value.push({ seq: item.seq, type: item.type, text: item.text, previewMime: item.previewMime, source: '异步 ' + item.time })
+        pushReply(
+          { type: item.type, text: item.text, seq: item.seq, previewMime: item.previewMime, source: item.source },
+          '异步',
+          item.time
+        )
       }
     } catch {
       // 轮询失败不打扰用户
@@ -144,10 +164,52 @@ function stopPolling() {
 }
 
 /**
- * 点击快捷命令，直接填进输入框
+ * 清空对话，顺便清掉宿主那边的调试记录
+ */
+async function clearChat() {
+  stopPolling()
+  messages.value = []
+  since = 0
+
+  try {
+    await api.post('admin/debug/reset')
+  } catch {
+    // 清空失败不影响界面
+  }
+}
+
+/**
+ * 滚到底部
+ */
+async function scrollToBottom() {
+  await nextTick()
+
+  if (listRef.value) {
+    listRef.value.scrollTop = listRef.value.scrollHeight
+  }
+}
+
+/**
+ * 快捷命令
  */
 function usePreset(text) {
   form.value.text = text
+}
+
+function now() {
+  return new Date().toLocaleTimeString()
+}
+
+/**
+ * Enter 发送，Shift+Enter 换行
+ */
+function onEnter(e) {
+  if (e.shiftKey) {
+    return
+  }
+
+  e.preventDefault()
+  send()
 }
 
 onMounted(refresh)
@@ -169,8 +231,8 @@ onBeforeUnmount(stopPolling)
       <div class="field">
         <label>会话类型</label>
         <select v-model="form.senderType">
-          <option value="group">群聊 group</option>
-          <option value="user">私聊 user</option>
+          <option value="group">群聊</option>
+          <option value="user">私聊</option>
         </select>
       </div>
 
@@ -184,66 +246,59 @@ onBeforeUnmount(stopPolling)
         <input v-model="form.target" placeholder="debug-group" />
       </div>
 
-      <div class="field">
-        <label>消息 id（可选）</label>
-        <input v-model="form.replyId" placeholder="留空自动生成" />
+      <button class="btn ghost" :disabled="messages.length === 0" @click="clearChat">清空对话</button>
+    </div>
+
+    <div ref="listRef" class="chat">
+      <p v-if="messages.length === 0" class="empty">
+        输入一条消息开始调试，比如 <code>/text</code>，Enter 发送
+      </p>
+
+      <div v-for="(item, index) in messages" :key="index" class="msg" :class="item.role">
+        <div class="bubble">
+          <div class="msg-meta">
+            {{ item.role === 'user' ? '我' : (item.source || '回复') }}
+            <span v-if="item.role === 'reply'" class="tag msg-type">{{ item.type }}</span>
+            <span class="msg-time">{{ item.time }}</span>
+          </div>
+
+          <div class="msg-text">{{ item.text }}</div>
+
+          <img
+            v-if="item.previewMime"
+            :src="'/api/admin/debug/preview?seq=' + item.seq"
+            class="preview"
+            alt="预览"
+          />
+        </div>
       </div>
+
+      <p v-if="polling" class="msg-meta chat-tip">等待异步回复…</p>
     </div>
 
-    <div class="field">
-      <label>消息内容</label>
-      <textarea v-model="form.text" rows="4" placeholder="输入要注入给插件的文本"></textarea>
+    <p v-if="error" class="error" style="margin-top: 10px">{{ error }}</p>
+
+    <div class="chat-input">
+      <textarea
+        v-model="form.text"
+        rows="2"
+        placeholder="输入消息，Enter 发送，Shift+Enter 换行"
+        @keydown.enter="onEnter"
+      ></textarea>
+
+      <button class="btn primary" :disabled="busy || !form.text.trim()" @click="send">
+        {{ busy ? '发送中…' : '发送' }}
+      </button>
     </div>
 
-    <div class="toolbar" style="margin-top: 10px">
+    <div class="chips">
       <button v-for="item in presets" :key="item" class="btn ghost sm" @click="usePreset(item)">
         {{ item }}
       </button>
 
       <span class="spacer" />
 
-      <button class="btn primary" :disabled="busy" @click="send">
-        {{ busy ? '注入中…' : '注入消息' }}
-      </button>
+      <span class="meta">{{ scopeLabel }} · 回复不会发到平台</span>
     </div>
-
-    <p class="hint-line">
-      默认走 <b>Dispatch</b>：消息按代理收到消息的方式分发给所有订阅者（插件处理、代理转发），回复不会真的发到平台。选了插件或实例就只发给它。
-    </p>
-
-    <p v-if="error" class="error">{{ error }}</p>
-
-    <div v-if="injected" class="deps">
-      <span class="dep state-dep">{{ scopeText }}</span>
-      <span class="dep state-dep">发送者 {{ injected.sender }}</span>
-      <span class="dep state-dep">目标 {{ injected.target }}</span>
-      <span class="dep state-dep">消息 id {{ injected.replyId }}</span>
-    </div>
-
-    <p v-if="polling" class="hint-line">等待异步回复中…</p>
-
-    <p v-if="replies.length === 0" class="empty">还没有回复，注入一条试试</p>
-
-    <table v-else class="table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>来源</th>
-          <th>类型</th>
-          <th>内容</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(item, index) in replies" :key="index">
-          <td class="meta">{{ index + 1 }}</td>
-          <td class="meta">{{ item.source }}</td>
-          <td><span class="tag">{{ item.type }}</span></td>
-          <td class="mono">
-            <div>{{ item.text }}</div>
-            <img v-if="item.previewMime" :src="'/api/admin/debug/preview?seq=' + item.seq" class="preview" alt="预览" />
-          </td>
-        </tr>
-      </tbody>
-    </table>
   </section>
 </template>

@@ -179,7 +179,7 @@ internal sealed class ComponentRegister : IRegister
     {
         EnsureOpen();
 
-        return new SendHandle(_ownProxyId, _ownUuid);
+        return new SendHandle(_ownProxyId, _ownUuid, _id);
     }
 
     /// <summary>
