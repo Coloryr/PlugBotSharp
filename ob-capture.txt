@@ -1,2 +1,0 @@
-POST /send_group_msg HTTP/1.1
-{"group_id":123456,"message":[{"type":"reply","data":{"id":"1"}}],"auto_escape":false}
