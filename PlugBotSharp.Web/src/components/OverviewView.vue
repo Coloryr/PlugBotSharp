@@ -16,39 +16,43 @@ const componentItems = computed(() => props.overview?.componentItems ?? [])
 const instanceItems = computed(() => props.overview?.instanceItems ?? [])
 
 /**
- * 把组件和实例上报的自定义状态摊平成一张表：一行一个状态
+ * 把组件和实例上报的自定义状态按对象分组，一组是一块监控面板
  */
-const stateRows = computed(() => {
-  const rows = []
+const stateGroups = computed(() => {
+  const groups = []
+
+  const add = (key, title, source, states) => {
+    const items = Object.entries(states || {}).map(([name, state]) => ({
+      name,
+      label: state?.label || name,
+      description: state?.description || '',
+      kind: state?.kind,
+      value: state?.value
+    }))
+
+    if (items.length === 0) {
+      return
+    }
+
+    items.sort((a, b) => a.label.localeCompare(b.label, 'zh-Hans-CN'))
+    groups.push({ key, title, source, states: items })
+  }
 
   for (const item of componentItems.value) {
-    for (const [name, state] of Object.entries(item.states || {})) {
-      rows.push({
-        key: 'c:' + item.id + ':' + name,
-        owner: item.name || item.id,
-        source: '组件 ' + item.id,
-        label: state?.label || name,
-        kind: state?.kind,
-        value: state?.value
-      })
-    }
+    add('c:' + item.id, item.name || item.id, '组件 ' + item.id, item.states)
   }
 
   for (const item of instanceItems.value) {
-    for (const [name, state] of Object.entries(item.states || {})) {
-      rows.push({
-        key: 'i:' + item.uuid + ':' + name,
-        owner: item.name || shortUuid(item.uuid),
-        source: '实例 ' + item.proxy,
-        label: state?.label || name,
-        kind: state?.kind,
-        value: state?.value
-      })
-    }
+    add('i:' + item.uuid, item.name || shortUuid(item.uuid), '实例 ' + item.proxy, item.states)
   }
 
-  return rows
+  return groups
 })
+
+/**
+ * 所有对象加起来一共几项状态
+ */
+const stateCount = computed(() => stateGroups.value.reduce((sum, group) => sum + group.states.length, 0))
 
 /**
  * 键值状态展开成一行行
@@ -155,40 +159,45 @@ function shortUuid(uuid) {
     </div>
   </section>
 
-  <section v-if="stateRows.length" class="panel panel-full">
+  <section v-if="stateGroups.length" class="panel panel-full">
     <header class="panel-head">
       <h3>自定义状态</h3>
-      <span class="meta">组件和实例上报的 {{ stateRows.length }} 项</span>
+      <span class="meta">组件和实例上报的 {{ stateCount }} 项，按对象分组</span>
     </header>
 
-    <table class="table state-table">
-      <thead>
-        <tr>
-          <th>对象</th>
-          <th>来源</th>
-          <th>状态</th>
-          <th>值</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in stateRows" :key="row.key">
-          <td class="name">{{ row.owner }}</td>
-          <td class="meta">{{ row.source }}</td>
-          <td><span class="tag">{{ row.label }}</span></td>
-          <td>
-            <details v-if="row.kind === 'kv'" class="inline-kv">
-              <summary>{{ kvRows(row.value).length }} 项</summary>
+    <div v-for="group in stateGroups" :key="group.key" class="state-group">
+      <div class="state-group-head">
+        <span class="name">{{ group.title }}</span>
+        <span class="meta">{{ group.source }}</span>
+      </div>
+
+      <div class="grid state-grid">
+        <div
+          v-for="state in group.states"
+          :key="state.name"
+          class="card state-card"
+          :title="state.description || state.label"
+        >
+          <div class="label">{{ state.label }}</div>
+
+          <template v-if="state.kind === 'kv'">
+            <div class="value">{{ kvRows(state.value).length }} 项</div>
+            <details v-if="kvRows(state.value).length" class="card-kv">
+              <summary>查看</summary>
               <div class="kv-table">
-                <div v-for="item in kvRows(row.value)" :key="item.key" class="kv-line">
+                <div v-for="item in kvRows(state.value)" :key="item.key" class="kv-line">
                   <span class="mono kv-key" :title="item.key">{{ item.key }}</span>
                   <span class="mono kv-value">{{ item.value }}</span>
                 </div>
               </div>
             </details>
-            <span v-else class="mono">{{ stateText(row) }}</span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+          </template>
+
+          <div v-else class="value">{{ stateText(state) }}</div>
+
+          <div v-if="state.description" class="hint">{{ state.description }}</div>
+        </div>
+      </div>
+    </div>
   </section>
 </template>

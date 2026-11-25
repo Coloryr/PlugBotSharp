@@ -138,6 +138,7 @@ _groups.Clear();
 - 句柄一直留着用，注册阶段结束后照样能用；再调 `RegisterState` / `RegisterKvState` 才会抛异常
 - 面板接口 `GET /api/admin/components` 和 `GET /api/admin/instances` 的 `states` 字段形如 `{"replies":{"label":"回复条数","description":"…","kind":"value","value":12},"groups":{"label":"群计数","description":"…","kind":"kv","value":{"群A":3}}}`
 - 组件卸载、实例删除时宿主会清掉它上报的状态
+- 面板的「概览」页除了组件 / 实例状态面板，还会把两边的状态摊平成一张「自定义状态」总表（对象 / 来源 / 状态 / 值），键值状态在表里可以直接展开
 - `DemoPlugin` 用回复计数（单值）和各命令被调用的次数（键值）做了示例；QQ 代理把每天各群已发的主动消息条数做成了键值状态 `quota`
 
 ## 组件和实例的设置

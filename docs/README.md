@@ -42,6 +42,7 @@ public class PluginMain : IBasePlugin
     public bool Disable() => true;
     public Dictionary<string, ConfigMap> ConfigMap() => new();
     public void UpdateMap(Dictionary<string, ConfigMap> data) { }
+    public void Reload() { }
 
     public void RegisterEventHook(IRegister register)
     {
@@ -53,7 +54,49 @@ public class PluginMain : IBasePlugin
 }
 ```
 
-最小代理（完整例子见 [proxy.md](proxy.md)）：继承 `IBaseProxy`，`CreateInstance()` 返回一个 `IProxyInstasnce`；实例在 `RegisterEventHook` 里拿到 `RegisterProxyEvent()` 的句柄，收到平台消息时调 `Dispatch(message)`，返回值就是要回的消息。
+每个函数的意思：
+
+| 函数 | 什么时候调 | 干什么 |
+| --- | --- | --- |
+| `Init(path)` | 加载时一次 | 拿到配置目录 `Configs/{组件id}`，读自己的配置 |
+| `Load()` | 加载时 | 初始化运行时资源，返回 `false` 算加载失败 |
+| `RegisterEventHook(register)` | `Load` 末尾一次 | 注册 / 订阅事件，拿句柄；注册器出了这个阶段就关闭 |
+| `Enable()` | 面板启用 | 开始干活（连平台、起服务器），返回 `false` 算启用失败 |
+| `Disable()` | 面板禁用 | 停掉手上的活；宿主会顺手摘掉 http 接口、关掉服务器 |
+| `Unload()` | 卸载 | 释放资源，之后组件目录可以删 |
+| `ConfigMap()` | 面板打开设置 | 声明配置项，面板照着生成表单 |
+| `UpdateMap(data)` | 面板保存设置 | 收到新配置，自己落盘、自己生效 |
+| `Reload()` | 面板重载 | `Disable → Reload → Enable` 的中间那步，重新读配置 |
+
+`RegisterEventHook` 里能调的注册方法：
+
+| 方法 | 意义 |
+| --- | --- |
+| `SubscribeMessage(msg => ...)` | 收消息，返回值是要回复的消息（不回复给空列表） |
+| `SubscribeMessage(async e => ...)` | 长任务版收消息，回调在后台跑，处理完 `await e.Reply(...)` |
+| `RegisterPluginEvent(eventId)` | 注册自定义事件，拿到 `RaiseHandle`，随时 `Raise(...)` 广播给别的组件 |
+| `RegisterState(name, label, description)` | 单值状态，面板上显示成 `名字: 值` |
+| `RegisterKvState(name, label, description)` | 只读键值状态，面板上显示成可展开的表格 |
+| `RegisterSend()` | 拿 `SendHandle`，主动给某个实例发消息 |
+| `SubscribeSendFilter((msg, reply) => ...)` | 发送前拦截，返回 `true` 取消这条消息 |
+| `RegisterHttpPath(handler)` | 注册 `/api/{组件id}` 接口（实例是 `/api/{组件id}/{uuid}`） |
+| `RegisterProxyEvent()` | 代理 / 实例专用，拿到 `Dispatch` 句柄把收到的消息注入宿主 |
+
+最小代理（完整例子见 [proxy.md](proxy.md)）：继承 `IBaseProxy`，`CreateInstance()` 返回一个 `IProxyInstasnce`，实例在 `RegisterEventHook` 里拿 `RegisterProxyEvent()` 的句柄，收到平台消息时调 `Dispatch(message)`，返回值就是要回的消息。
+
+代理和实例多出来的函数：
+
+| 函数 | 意义 |
+| --- | --- |
+| `IBaseProxy.CreateInstance()` | 建一个实例对象，一个实例对应一个账号 / 一条连接 |
+| `IBaseProxy.Reload(instance)` | 组件级配置变了，推给实例 |
+| `Instance.Init(path, uuid)` | 实例自己的配置目录 `Instances/{uuid}` |
+| `Instance.RegisterEventHook(register)` | 拿分发句柄、注册 http 路径、上报状态 |
+| `Instance.Enable()` / `Disable()` | 连上 / 断开平台 |
+| `Instance.Tick()` | 每秒一次，做重连、重试这类轻活 |
+| `Instance.SendAsync(message, reply)` | 插件主动发的消息从这里出去，拦截器已经放行 |
+
+不在注册阶段也能用的：`ComponentApi`（组件 / 实例管理、起服务器）和 `CertStore`（证书），见 [api.md](api.md)。
 
 接口定义（`IBaseComponent` / `IBasePlugin` / `IBaseProxy` / `IProxyInstasnce` / `IBaseLib`）属于进阶内容，见 [api.md](api.md#组件接口)。
 
@@ -105,41 +148,6 @@ public class PluginMain : IBasePlugin
 - 禁用会停掉实例、摘掉这个组件注册的 http 接口、关掉它起的服务器；卸载会先卸载依赖它的组件，再回收 `AssemblyLoadContext`
 - 卸载 / 禁用都是运行时行为，重启后会重新加载；要彻底移除用面板的「删除」
 - `Tick` 每秒一次，只做重连、重试这类轻活，别阻塞
-
-## 组件能用的 API
-
-注册阶段拿到 `IRegister`，能做的事：
-
-| 能力 | API | 用在哪 |
-| --- | --- | --- |
-| 自定义事件 | `RegisterPluginEvent(eventId)` → `RaiseHandle` | 插件、代理、实例都能发，别的组件按 `[组件id]事件id` 订阅 |
-| 收消息 | `SubscribeMessage(Func<ProxyMessage, List<BaseMessage>>)` / `SubscribeMessage(Func<MessageEvent, Task>)` | 插件处理消息，代理转发消息 |
-| 发消息 / 拦截 | `RegisterSend()` → `SendHandle.SendAsync`、`SubscribeSendFilter(...)` | 主动发消息、屏蔽某条消息 |
-| 注入消息 | `RegisterProxyEvent()` → `ProxyEventHandle.Dispatch` | **只有代理 / 实例**能拿 |
-| 状态 | `RegisterState(name, label, description)` / `RegisterKvState(...)` | 面板上显示运行时数据 |
-| http 接口 | `RegisterHttpPath(Func<HttpContext, Task>)` | `/api/{组件id}`，实例是 `/api/{组件id}/{uuid}` |
-
-不在注册阶段也能用的：
-
-| 能力 | API |
-| --- | --- |
-| 配置项 | `ConfigMap()` 声明、`UpdateMap()` 接收，面板生成表单 |
-| 宿主管理 | `ComponentApi.GetComponents()` / `GetInstances()` / `StartComponent` / `EnableInstance` … |
-| 自建服务器 | `ComponentApi.StartServer(owner, ServerOptions, configure)`，组件结束时自动关闭 |
-| 证书 | `CertStore.Names()` / `CertStore.List()` |
-
-```csharp
-public void RegisterEventHook(IRegister register)
-{
-    register.SubscribeMessage(msg => ...);                    // 收消息
-    _ping = register.RegisterPluginEvent("ping");               // 自定义事件
-    _replies = register.RegisterState("replies", "回复条数", "累计回复条数");
-    register.RegisterHttpPath(HandleAsync);                     // /api/{组件id}
-    _send = register.RegisterSend();                            // 主动发消息
-}
-```
-
-细节、参数和注意事项都在 [api.md](api.md)：事件与句柄、状态、配置、`ComponentApi`、http 和证书。
 
 ## 文档索引
 
