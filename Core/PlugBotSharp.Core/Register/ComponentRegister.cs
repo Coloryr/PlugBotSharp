@@ -179,7 +179,10 @@ internal sealed class ComponentRegister : IRegister
     {
         EnsureOpen();
 
-        return new SendHandle(_ownProxyId, _ownUuid, _id);
+        // 实例带上 uuid 前缀，调试面板上能区分是哪个实例发的
+        var ownerId = _ownUuid is null ? _id : _id + "/" + _ownUuid.Value.ToString()[..8];
+
+        return new SendHandle(_ownProxyId, _ownUuid, ownerId);
     }
 
     /// <summary>
