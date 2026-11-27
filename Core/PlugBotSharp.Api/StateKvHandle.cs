@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 只读键值状态的句柄：一个名字下面挂一组 键 -&gt; 值，面板上显示成可展开的表格。

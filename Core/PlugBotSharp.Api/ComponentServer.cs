@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 组件用的 http / websocket 服务器，由宿主统一创建和关闭

@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 状态句柄的公共部分：注册状态时拿到，之后随时更新。

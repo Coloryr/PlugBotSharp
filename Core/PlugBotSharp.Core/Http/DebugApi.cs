@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Messages;
+using PlugBotSharp.Core.Components;
 using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Plugin;
-using PlugBotSharp.Core.Proxy;
 
 namespace PlugBotSharp.Core.Http;
 

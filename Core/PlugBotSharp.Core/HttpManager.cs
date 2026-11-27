@@ -1,3 +1,4 @@
+using PlugBotSharp.Api;
 using PlugBotSharp.Core.Http;
 
 namespace PlugBotSharp.Core;

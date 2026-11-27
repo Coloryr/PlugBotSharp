@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Http;
-using PlugBotSharp.Core;
 using PlugBotSharp.Core.Http;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Core.Components;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Configs;
 
 namespace PlugBotSharp.Tests;
 

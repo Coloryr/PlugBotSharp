@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using PlugBotSharp.Api;
 
 namespace PlugBotSharp.Core.Http;
 

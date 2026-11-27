@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core.Messages;
+namespace PlugBotSharp.Api.Messages;
 
 /// <summary>
 /// 列表消息，把多条消息合成一条发送

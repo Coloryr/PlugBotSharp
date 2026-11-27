@@ -1,8 +1,8 @@
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Configs;
+using PlugBotSharp.Api.Messages;
+using PlugBotSharp.Core.Components;
 using PlugBotSharp.Core.Http;
-using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Plugin;
-using PlugBotSharp.Core.Proxy;
 
 namespace PlugBotSharp.Core;
 

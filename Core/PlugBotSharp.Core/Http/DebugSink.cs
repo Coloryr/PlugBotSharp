@@ -1,4 +1,4 @@
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Messages;
 
 namespace PlugBotSharp.Core.Http;
 

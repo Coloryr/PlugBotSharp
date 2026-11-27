@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 public interface IProxyInstasnce : IBaseComponent
 {

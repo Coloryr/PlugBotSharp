@@ -1,7 +1,6 @@
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace PlugBotSharp.Core.Configs;
+namespace PlugBotSharp.Api.Configs;
 
 /// <summary>
 /// 配置项定义：Key 是配置名，子类带当前值和约束，交给网页端渲染成表单

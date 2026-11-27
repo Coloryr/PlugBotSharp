@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 宿主当前的语言，组件可以通过 ComponentApi.Lang 读到

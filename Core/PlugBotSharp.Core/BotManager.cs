@@ -1,7 +1,10 @@
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Configs;
 using PlugBotSharp.Core.Auth;
+using PlugBotSharp.Core.Components;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Http;
 using PlugBotSharp.Core.Nuget;

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Http;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api.Configs;
 
 namespace PlugBotSharp.Core.Http;
 

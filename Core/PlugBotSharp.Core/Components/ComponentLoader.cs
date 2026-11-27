@@ -1,13 +1,12 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Configs;
 using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Lib;
 using PlugBotSharp.Core.Nuget;
-using PlugBotSharp.Core.Plugin;
-using PlugBotSharp.Core.Proxy;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core.Components;
 
 /// <summary>
 /// 组件加载

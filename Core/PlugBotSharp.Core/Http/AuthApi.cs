@@ -235,7 +235,7 @@ internal static class AuthApi
             return ApiUtil.Fail(BotLang.GetLang(BotLangKey.AuthUserInvalid));
         }
 
-        if (!AccountManager.TryAdd(obj.User, obj.Password, out var account, out var error))
+        if (!AccountManager.TryAdd(obj.User, obj.Password, out var account, out var error) || account == null)
         {
             return ApiUtil.Fail(error);
         }

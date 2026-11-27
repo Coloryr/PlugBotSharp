@@ -1,3 +1,5 @@
+using PlugBotSharp.Api;
+
 namespace PlugBotSharp.Core;
 
 internal enum BotLangKey
@@ -158,7 +160,7 @@ internal static class BotLang
     /// <summary>
     /// 按当前语言取文案并格式化参数
     /// </summary>
-    public static string GetLang(BotLangKey key, params object[] args)
+    public static string GetLang(BotLangKey key, params object?[] args)
     {
         var text = BotManager.Lang == Lang.en_us ? GetEn(key) : GetZh(key);
 

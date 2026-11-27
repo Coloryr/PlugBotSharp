@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace PlugBotSharp.Core.Configs;
+namespace PlugBotSharp.Api.Configs;
 
 [JsonConverter(typeof(JsonStringEnumConverter<ComponentType>))]
 public enum ComponentType

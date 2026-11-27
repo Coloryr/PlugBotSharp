@@ -1,6 +1,4 @@
-using System;
-
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 public interface IBaseLib
 {

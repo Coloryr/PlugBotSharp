@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using NLog;
 using Microsoft.AspNetCore.Http;
-using PlugBotSharp.Core;
-using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Messages;
 using PlugBotSharp.QQLib;
+using PlugBotSharp.Api.Configs;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Messages;
 
 namespace PlugBotSharp.QQProxy;
 

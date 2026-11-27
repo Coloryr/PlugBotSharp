@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog;
+using PlugBotSharp.Core.Components;
 
 namespace PlugBotSharp.Core.Http;
 

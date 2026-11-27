@@ -1,8 +1,8 @@
-using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Events;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// RegisterEventHook 阶段拿到的注册器，方法分三类：

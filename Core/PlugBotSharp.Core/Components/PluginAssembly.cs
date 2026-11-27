@@ -1,22 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Events;
 using PlugBotSharp.Core.Http;
 
-namespace PlugBotSharp.Core.Plugin;
+namespace PlugBotSharp.Core.Components;
 
-internal class PluginAssembly : BaseAssembly
+internal class PluginAssembly(IBasePlugin plugin) : BaseAssembly
 {
-    public IBasePlugin Plugin { get; private set; }
+    public IBasePlugin Plugin { get; private set; } = plugin;
 
     // public readonly List<>
     public readonly List<PluginAssembly> Deps = [];
-
-    public PluginAssembly(IBasePlugin plugin)
-    {
-        Plugin = plugin;
-    }
 
     /// <summary>
     /// 断开对实例和加载上下文的引用

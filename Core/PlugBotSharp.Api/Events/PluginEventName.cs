@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api.Events;
 
 /// <summary>
 /// 自定义事件的名字规则：[组件id]事件id

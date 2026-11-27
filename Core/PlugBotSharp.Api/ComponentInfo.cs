@@ -1,6 +1,6 @@
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api.Configs;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 组件信息，ComponentApi.GetComponents 返回

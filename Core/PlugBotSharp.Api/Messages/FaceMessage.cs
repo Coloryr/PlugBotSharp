@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core.Messages;
+namespace PlugBotSharp.Api.Messages;
 
 /// <summary>
 /// 表情消息，Market 为 true 时是表情包（mface）

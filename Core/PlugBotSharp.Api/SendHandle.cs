@@ -1,6 +1,6 @@
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 发送句柄，把消息交给指定实例发出去。

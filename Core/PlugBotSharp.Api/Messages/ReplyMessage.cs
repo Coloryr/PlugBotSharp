@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core.Messages;
+namespace PlugBotSharp.Api.Messages;
 
 /// <summary>
 /// 回复消息，表示这条消息在引用哪一条：OneBot 的 reply 段、QQ 的 message_reference、Discord 的 message_reference

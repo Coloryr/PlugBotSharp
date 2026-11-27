@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-using PlugBotSharp.Core.Configs;
-
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 public interface IBasePlugin : IComponent
 {

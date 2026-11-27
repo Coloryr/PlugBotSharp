@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core.Messages;
+namespace PlugBotSharp.Api.Messages;
 
 /// <summary>
 /// 代理上报的消息事件

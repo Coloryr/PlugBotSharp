@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 自定义事件的触发器，注册事件时返回。

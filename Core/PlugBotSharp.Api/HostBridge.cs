@@ -1,8 +1,7 @@
-using Microsoft.AspNetCore.Builder;
-using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Configs;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 宿主能力：Core 实现，Api 里的句柄和 ComponentApi 通过它调到宿主；

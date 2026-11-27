@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core.Messages;
+namespace PlugBotSharp.Api.Messages;
 
 /// <summary>
 /// 语音消息

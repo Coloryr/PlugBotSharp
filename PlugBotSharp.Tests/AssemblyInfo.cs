@@ -1,7 +1,6 @@
 using PlugBotSharp.Core;
-using PlugBotSharp.Core.Http;
-using Xunit;
 using System.Runtime.CompilerServices;
+using PlugBotSharp.Api;
 
 // 组件注册表是进程级静态状态，测试串行执行
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

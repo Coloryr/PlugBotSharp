@@ -1,4 +1,4 @@
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api.Configs;
 using PlugBotSharp.QQProxy;
 
 namespace PlugBotSharp.Tests;

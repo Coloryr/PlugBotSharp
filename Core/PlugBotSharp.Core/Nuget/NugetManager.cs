@@ -4,7 +4,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Text.Json;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api.Configs;
+using PlugBotSharp.Core.Components;
 
 namespace PlugBotSharp.Core.Nuget;
 

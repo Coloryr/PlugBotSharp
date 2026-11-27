@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 证书清单（Certs/Certs.json）

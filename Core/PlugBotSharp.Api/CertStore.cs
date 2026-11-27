@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 证书信息
@@ -60,7 +60,7 @@ public static class CertStore
         // 2. 清单里的优先，密码没写就找密码文件
         foreach (var item in ReadManifest())
         {
-            var file = System.IO.Path.IsPathRooted(item.File) ? item.File : System.IO.Path.Combine(s_path, item.File);
+            var file = Path.IsPathRooted(item.File) ? item.File : System.IO.Path.Combine(s_path, item.File);
 
             items.Add(new CertInfo(item.Name, file,
                 string.IsNullOrEmpty(item.Password) ? FindPassword(file) : item.Password));
@@ -76,7 +76,7 @@ public static class CertStore
                     continue;
                 }
 
-                var name = System.IO.Path.GetFileNameWithoutExtension(file);
+                var name = Path.GetFileNameWithoutExtension(file);
 
                 if (items.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -185,7 +185,7 @@ public static class CertStore
     {
         foreach (var zip in Directory.EnumerateFiles(s_path, "*.zip"))
         {
-            var target = System.IO.Path.Combine(s_path, System.IO.Path.GetFileNameWithoutExtension(zip));
+            var target = Path.Combine(s_path, System.IO.Path.GetFileNameWithoutExtension(zip));
 
             if (Directory.Exists(target))
             {

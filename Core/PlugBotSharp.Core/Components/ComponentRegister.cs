@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Http;
 using PlugBotSharp.Core.Http;
-using PlugBotSharp.Core.Messages;
-using PlugBotSharp.Core.Plugin;
-using PlugBotSharp.Core.Proxy;
+using PlugBotSharp.Api.Messages;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Events;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core.Components;
 
 /// <summary>
 /// 注册器的实现，Registration 阶段结束就关闭，之后再用直接抛异常

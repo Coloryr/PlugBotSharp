@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api.Events;
 
 /// <summary>
 /// Proxy 事件类型

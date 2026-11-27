@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace PlugBotSharp.Core.Messages;
+namespace PlugBotSharp.Api.Messages;
 
 /// <summary>
 /// 直通消息：内容交给代理解释，不同代理用不同的 Name

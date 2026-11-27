@@ -1,5 +1,4 @@
-using System;
-using PlugBotSharp.Core;
+using PlugBotSharp.Api;
 
 namespace PlugBotSharp.QQProxy;
 
@@ -50,7 +49,7 @@ public static class ProxyLang
     /// <summary>
     /// 按当前语言取文案并格式化参数
     /// </summary>
-    public static string GetLang(ProxyLangKey key, params object[] args)
+    public static string GetLang(ProxyLangKey key, params object?[] args)
     {
         var text = ComponentApi.Lang == Lang.en_us ? GetEn(key) : GetZh(key);
 

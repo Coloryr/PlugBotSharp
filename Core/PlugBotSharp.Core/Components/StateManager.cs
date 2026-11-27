@@ -1,6 +1,7 @@
-﻿using PlugBotSharp.Core.Configs;
+﻿using PlugBotSharp.Api.Configs;
+using PlugBotSharp.Core.Configs;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core.Components;
 
 /// <summary>
 /// 组件/实例启用状态记录，只由宿主内部维护，组件不能直接调用

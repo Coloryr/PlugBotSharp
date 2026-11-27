@@ -1,6 +1,6 @@
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api.Events;
 
 /// <summary>
 /// 插件事件类型

@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.Loader;
-using System.Text;
-using PlugBotSharp.Core.Configs;
+﻿using System.Runtime.Loader;
+using PlugBotSharp.Api.Configs;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core.Components;
 
 /// <summary>
 /// 组件生命周期状态

@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace PlugBotSharp.Core.Configs;
+﻿namespace PlugBotSharp.Core.Configs;
 
 /// <summary>
 /// 面板账户

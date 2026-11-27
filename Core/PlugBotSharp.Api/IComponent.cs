@@ -1,7 +1,6 @@
-using System;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api.Configs;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 public interface IBaseComponent
 {

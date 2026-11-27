@@ -1,19 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Configs;
 using PlugBotSharp.Core.Http;
 
-namespace PlugBotSharp.Core.Proxy;
+namespace PlugBotSharp.Core.Components;
 
-internal class ProxyAssembly : BaseAssembly
+internal class ProxyAssembly(IBaseProxy proxy) : BaseAssembly
 {
-    public IBaseProxy Proxy { get; private set; }
-
-    public ProxyAssembly(IBaseProxy proxy)
-    {
-        Proxy = proxy;
-    }
+    public IBaseProxy Proxy { get; private set; } = proxy;
 
     /// <summary>
     /// 断开对实例和加载上下文的引用

@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Configs;
+using PlugBotSharp.Api.Events;
 using PlugBotSharp.Core.Configs;
 using PlugBotSharp.Core.Http;
-using PlugBotSharp.Core.Proxy;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core.Components;
 
 /// <summary>
 /// 实例管理：创建实例、启用实例、驱动 Tick

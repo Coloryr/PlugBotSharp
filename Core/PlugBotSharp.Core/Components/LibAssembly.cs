@@ -1,15 +1,10 @@
-﻿using PlugBotSharp.Core.Configs;
+﻿using PlugBotSharp.Api;
 
-namespace PlugBotSharp.Core.Lib;
+namespace PlugBotSharp.Core.Components;
 
-internal class LibAssembly : BaseAssembly
+internal class LibAssembly(IBaseLib lib) : BaseAssembly
 {
-    public IBaseLib Lib { get; private set; }
-
-    public LibAssembly(IBaseLib lib)
-    {
-        Lib = lib;
-    }
+    public IBaseLib Lib { get; private set; } = lib;
 
     /// <summary>
     /// 断开对实例和加载上下文的引用

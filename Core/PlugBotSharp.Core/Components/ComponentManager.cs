@@ -1,12 +1,10 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using PlugBotSharp.Core.Configs;
-using PlugBotSharp.Core.Lib;
-using PlugBotSharp.Core.Plugin;
-using PlugBotSharp.Core.Proxy;
+using PlugBotSharp.Api;
+using PlugBotSharp.Api.Configs;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core.Components;
 
 /// <summary>
 /// 组件管理：加载后的启用、禁用、卸载

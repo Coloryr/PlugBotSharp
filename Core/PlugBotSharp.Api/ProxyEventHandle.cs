@@ -1,6 +1,6 @@
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 代理事件句柄：代理把收到的消息注入进来，宿主自动交给所有订阅消息事件的组件，再把结果收集回来。

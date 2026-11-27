@@ -1,5 +1,4 @@
 using PlugBotSharp.Core.Auth;
-using PlugBotSharp.Core.Configs;
 
 namespace PlugBotSharp.Core;
 

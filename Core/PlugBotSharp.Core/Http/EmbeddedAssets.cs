@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace PlugBotSharp.Core.Http;
+﻿namespace PlugBotSharp.Core.Http;
 
 /// <summary>
 /// 编译时嵌入程序集的前端资源

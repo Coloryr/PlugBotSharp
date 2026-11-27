@@ -1,6 +1,6 @@
-using PlugBotSharp.Core.Messages;
+using PlugBotSharp.Api.Messages;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api.Events;
 
 /// <summary>
 /// 消息事件（长任务版）：插件收到消息后可以慢慢处理，处理完用 Reply 把消息发回发起这次分发的代理实例

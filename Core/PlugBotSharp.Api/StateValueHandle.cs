@@ -1,4 +1,4 @@
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 单值状态的句柄：一个名字一个值，值可以是任意基础类型，面板上显示成 名字: 值

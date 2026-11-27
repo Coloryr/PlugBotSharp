@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
-using PlugBotSharp.Core.Configs;
+using PlugBotSharp.Api.Configs;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Api;
 
 /// <summary>
 /// 组件可以调用的宿主接口：自己不做实现，交给宿主注入的 <see cref="IApiHost"/>

@@ -1,7 +1,8 @@
 ﻿using System.IO.Compression;
+using PlugBotSharp.Api.Configs;
 using PlugBotSharp.Core.Configs;
 
-namespace PlugBotSharp.Core;
+namespace PlugBotSharp.Core.Components;
 
 /// <summary>
 /// 组件安装与删除，安装包为包含 Meta.json 和 dll 的 zip
